@@ -1,0 +1,206 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Konvo — design tokens
+   Fonte da verdade de cor, tipografia e espaco. Nada de hex solto nos
+   componentes: se uma cor nao esta aqui, ela nao existe no produto.
+   ========================================================================== */
+
+@theme {
+  /* --- marca ------------------------------------------------------------
+     O azul primario e o azul REAL da arte aprovada (#0043FD), amostrado do
+     icone e do wordmark. O #536DFE que o brief §03 chamava de "primary" fica
+     como tom de apoio (konvo-400) — usar os dois como primario faz o wordmark
+     brigar com os botoes na mesma tela.                                     */
+  --color-konvo-50: #eef2ff;
+  --color-konvo-100: #dfe6ff;
+  --color-konvo-200: #c2ceff;
+  --color-konvo-300: #94a8ff;
+  --color-konvo-400: #536dfe;
+  --color-konvo-500: #0043fd;
+  --color-konvo-600: #0036d4;
+  --color-konvo-700: #002ba8;
+  --color-konvo-800: #002586;
+  --color-konvo-900: #00206e;
+
+  /* --- neutros ---------------------------------------------------------- */
+  --color-ink: #0d1117;
+  --color-ink-70: #454b54;
+  --color-ink-50: #6b7280;
+  --color-ink-35: #9aa0a8;
+  --color-canvas: #fafaf8;
+  --color-surface: #ffffff;
+  --color-surface-2: #f3f3f0;
+  --color-surface-3: #ecedea;
+  --color-hairline: #e2e3df;
+
+  /* --- estados do grupo -------------------------------------------------
+     Precisam ser lidos de relance, por quem esta dirigindo. Par de tons:
+     -fill para o ponto/fundo, -ink para texto sobre claro (contraste AA).   */
+  --color-together: #19c6b3;
+  --color-together-ink: #05806f;
+  --color-together-soft: #e6faf7;
+
+  --color-stretching: #ff8a4c;
+  --color-stretching-ink: #a84405;
+  --color-stretching-soft: #fff2e9;
+
+  --color-split: #f0475e;
+  --color-split-ink: #ad0f26;
+  --color-split-soft: #ffecef;
+
+  /* --- cores de participante -------------------------------------------
+     Seis tons distinguiveis entre si e sobre o mapa claro. A ordem importa:
+     e a ordem de atribuicao conforme as pessoas entram na trip.            */
+  --color-p1: #0043fd;
+  --color-p2: #7b61ff;
+  --color-p3: #19c6b3;
+  --color-p4: #ff8a4c;
+  --color-p5: #f0559e;
+  --color-p6: #f5b62e;
+
+  /* --- tipografia -------------------------------------------------------
+     Plus Jakarta Sans: geometrica levemente arredondada, na linha do
+     wordmark, e legivel em movimento. Nada abaixo de peso 500 na UI.       */
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", system-ui, sans-serif;
+  --font-numeric: "Plus Jakarta Sans", ui-monospace, system-ui, sans-serif;
+
+  /* --- raios ------------------------------------------------------------ */
+  --radius-card: 1rem;
+  --radius-sheet: 1.5rem;
+  --radius-pill: 999px;
+
+  /* --- sombras ----------------------------------------------------------
+     Contidas. O brief pede "minimal shadows" — elevacao vem de hairline e
+     de fundo, nao de blur pesado.                                          */
+  --shadow-card: 0 1px 2px rgb(13 17 23 / 0.04), 0 1px 3px rgb(13 17 23 / 0.06);
+  --shadow-sheet: 0 -1px 3px rgb(13 17 23 / 0.05), 0 -8px 24px rgb(13 17 23 / 0.08);
+  --shadow-fab: 0 2px 8px rgb(0 67 253 / 0.28), 0 1px 2px rgb(0 67 253 / 0.2);
+}
+
+/* ==========================================================================
+   Tema escuro
+
+   Existe por seguranca, nao por estetica: tela branca dentro de carro escuro
+   ofusca quem esta dirigindo. E o mesmo motivo pelo qual o painel do carro
+   escurece a noite.
+
+   Sao os MESMOS nomes de token — nenhum componente sabe que o tema mudou.
+   Duas coisas mudam de valor, e nao de papel:
+   - o azul primario clareia (#0043FD nao tem contraste sobre fundo escuro);
+   - os fundos nao sao preto puro: preto absoluto sobre OLED borra em
+     movimento, e o mapa fica com halo em volta dos tracos.
+   ========================================================================== */
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-konvo-50: #131c31;
+  --color-konvo-100: #16244a;
+  --color-konvo-200: #1b3272;
+  --color-konvo-300: #2a51b8;
+  --color-konvo-400: #4670ff;
+  --color-konvo-500: #5c8aff;
+  --color-konvo-600: #7ba1ff;
+  --color-konvo-700: #9db9ff;
+  --color-konvo-800: #c2d3ff;
+  --color-konvo-900: #e0e9ff;
+
+  --color-ink: #edf0f4;
+  --color-ink-70: #a8b2bf;
+  --color-ink-50: #808b9a;
+  --color-ink-35: #5c6675;
+  --color-canvas: #0b0e14;
+  --color-surface: #151a23;
+  --color-surface-2: #1d242f;
+  --color-surface-3: #28313d;
+  --color-hairline: #262e3a;
+
+  --color-together: #2fdcc4;
+  --color-together-ink: #5fe8d3;
+  --color-together-soft: #0d2b28;
+
+  --color-stretching: #ff9a63;
+  --color-stretching-ink: #ffb183;
+  --color-stretching-soft: #2d1c11;
+
+  --color-split: #ff6076;
+  --color-split-ink: #ff8a99;
+  --color-split-soft: #2d1319;
+
+  --color-p1: #5c8aff;
+  --color-p2: #9b86ff;
+  --color-p3: #2fdcc4;
+  --color-p4: #ff9a63;
+  --color-p5: #ff77b4;
+  --color-p6: #ffc94a;
+
+  /* No escuro a elevacao vem de superficie mais clara, nao de sombra — sombra
+     preta sobre fundo preto nao aparece. */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-sheet: 0 -8px 30px rgb(0 0 0 / 0.55);
+  --shadow-fab: 0 2px 12px rgb(92 138 255 / 0.35);
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior-y: none;
+  }
+
+  /* Numeros de distancia e ETA mudam o tempo todo. Sem tabular-nums o texto
+     "pula" na tela a cada atualizacao — irritante e ilegivel em movimento. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  button,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* O app e uma superficie fixa de altura de tela: o mapa e o bottom sheet
+     dependem disso. O scroll acontece dentro dos containers, nunca no body. */
+  #root {
+    height: 100dvh;
+    overflow: hidden;
+  }
+}
+
+@layer utilities {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .h-safe-bottom {
+    height: env(safe-area-inset-bottom);
+  }
+}
+
+/* MapLibre traz CSS proprio; so o necessario para nossos marcadores HTML. */
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+  background: rgb(255 255 255 / 0.7) !important;
+}
+.maplibregl-ctrl-bottom-left,
+.maplibregl-ctrl-top-right {
+  display: none;
+}

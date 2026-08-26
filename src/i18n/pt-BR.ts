@@ -1,0 +1,148 @@
+import type { TranslationKey } from "./en";
+
+/**
+ * Português do Brasil.
+ *
+ * O tipo obriga a cobrir todas as chaves de `en` — nao da para publicar com
+ * traducao faltando.
+ */
+export const ptBR: Record<TranslationKey, string> = {
+  // --- navegacao ---
+  "nav.home": "Início",
+  "nav.trips": "Viagens",
+  "nav.new": "Novo Konvo",
+  "nav.activity": "Atividade",
+  "nav.you": "Você",
+
+  // --- home ---
+  "home.prompt": "Para onde vamos?",
+  "home.addDestination": "Adicionar destino",
+  "home.upcoming": "Próximas",
+  "home.recent": "Recentes",
+  "home.openKonvo": "Abrir Konvo",
+  "home.inProgress": "Em andamento",
+
+  // --- botao + ---
+  "new.title": "Começar um Konvo",
+  "new.together": "Viajar juntos",
+  "new.togetherCopy": "Mesmo trajeto. Veículos diferentes.",
+  "new.meet": "Encontrar em algum lugar",
+  "new.meetCopy": "Lugares diferentes. Mesmo destino.",
+  "new.addStop": "Adicionar parada",
+  "new.addStopCopy": "Todo mundo recebe o mesmo ponto de encontro",
+  "new.invite": "Convidar alguém",
+  "new.inviteCopy": "Compartilhar o link deste Konvo",
+  "new.another": "Novo Konvo",
+
+  // --- estado do grupo ---
+  "status.together": "Todo mundo junto",
+  "status.fallingBehind": "{name} está ficando pra trás",
+  "status.split": "Grupo dividido",
+  "status.splitDetail": "{back} atrás do grupo",
+  "status.memberStopped": "{name} parou",
+  "status.membersStopped": "{count} pessoas pararam",
+  "status.regrouping": "Reagrupando",
+  "status.arrivingIn": "Todos chegam em ~{time}",
+  "status.allArrived": "Todo mundo chegou",
+  "status.noSignal": "Ninguém está transmitindo",
+  "status.rejoined": "{name} voltou pro grupo",
+  "status.backTogether": "Todo mundo junto de novo",
+
+  // --- estado individual ---
+  "member.leader": "Guia",
+  "member.onRoute": "Na rota",
+  "member.behind": "{distance} atrás",
+  "member.behindTime": "{time} atrás",
+  "member.ahead": "{distance} à frente",
+  "member.stopped": "Parou {ago}",
+  "member.offRoute": "Fora da rota",
+  "member.offline": "Sem sinal {ago}",
+  "member.arrived": "Chegou",
+  "member.passengerWith": "Passageiro · com {name}",
+  "member.trackedBy": "Rastreado pelo celular de {name}",
+
+  // --- contagens ---
+  "count.people": "{count} pessoas",
+  "count.vehicles": "{count} veículos",
+  "count.remaining": "{distance} · faltam {time}",
+
+  // --- transporte ---
+  "transport.car": "Carro",
+  "transport.motorcycle": "Moto",
+  "transport.bus": "Ônibus",
+  "transport.passenger": "Passageiro",
+  "transport.other": "Outro",
+
+  // --- trips ---
+  "trips.title": "Viagens",
+  "trips.active": "Em andamento",
+  "trips.upcoming": "Próximas",
+  "trips.past": "Passadas",
+
+  // --- activity ---
+  "activity.title": "Atividade",
+  "activity.empty": "Nada por aqui",
+  "activity.emptyCopy": "O que acontece durante uma viagem aparece aqui.",
+  "activity.view": "Ver",
+  "activity.addForEveryone": "Adicionar pra todos",
+  "activity.markAllRead": "Marcar tudo como lido",
+
+  "event.memberJoined": "{name} entrou",
+  "event.memberLeft": "{name} saiu",
+  "event.tripStarted": "Konvo começou",
+  "event.tripCompleted": "Todo mundo chegou",
+  "event.stopProposed": "{name} pediu uma parada",
+  "event.stopAccepted": "Nova parada do grupo",
+  "event.groupSplit": "Grupo dividido",
+  "event.groupRejoined": "{name} voltou pro grupo",
+  "event.memberStopped": "{name} parou",
+  "event.memberArrived": "{name} chegou",
+  "event.voiceNote": "{name} mandou um recado",
+
+  // --- acoes rapidas ---
+  "quick.gas": "Gasolina",
+  "quick.bathroom": "Banheiro",
+  "quick.food": "Comida",
+  "quick.stop": "Parar",
+  "quick.problem": "Problema",
+  "quick.regroup": "Reagrupar",
+  "quick.ok": "Tô bem",
+
+  // --- you ---
+  "you.theme": "Aparência",
+  "you.themeAuto": "Auto",
+  "you.themeLight": "Claro",
+  "you.themeDark": "Escuro",
+  "you.themeAutoCopy": "Escuro depois das 18h — menos ofuscamento dirigindo à noite",
+  "you.title": "Você",
+  "you.navigateWith": "Navegar com",
+  "you.distanceUnit": "Distância",
+  "you.language": "Idioma",
+  "you.locationSection": "Localização",
+  "you.locationOnlyActive": "Compartilhar só durante Konvos ativos",
+  "you.locationOnlyActiveCopy":
+    "Fora de uma viagem, o Konvo não recebe onde você está.",
+  "you.emergencyContact": "Contato de emergência",
+  "you.emergencyContactCopy": "Mostrado ao grupo se você avisar um problema",
+  "you.notSet": "Não definido",
+  "you.signOut": "Sair",
+  "you.unitKm": "km",
+  "you.unitMi": "milhas",
+
+  // --- vazios ---
+  "empty.home.tagline": "Viajem juntos.",
+  "empty.home.copy":
+    "Mantenha todo mundo junto, mesmo viajando em veículos diferentes.",
+  "empty.home.cta": "Começar um Konvo",
+  "empty.trips.title": "Nenhum Konvo ainda",
+  "empty.trips.copy": "Crie sua primeira viagem compartilhada.",
+
+  // --- conexao / GPS ---
+  "conn.offline": "Você está sem conexão",
+  "conn.offlineDetail": "Guardando sua posição — vai sincronizar quando voltar o sinal",
+  "conn.queued": "{count} posições esperando pra sincronizar",
+  "conn.locationDenied": "Localização desligada",
+  "conn.locationDeniedDetail": "Sem ela o Konvo não consegue te mostrar pro grupo",
+  "conn.enable": "Ligar",
+  "conn.screenOn": "Mantendo a tela ligada",
+};
