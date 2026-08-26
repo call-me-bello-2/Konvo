@@ -26,7 +26,48 @@ export interface Fix extends LatLng {
   at: number;
 }
 
-export type TransportType = "car" | "motorcycle" | "bus" | "passenger" | "other";
+/**
+ * Como a pessoa esta indo.
+ *
+ * A divisao que importa nao e o veiculo em si — e se ela segue A ROTA
+ * COMPARTILHADA ou vai por conta propria. Ver `isRoadBound`.
+ */
+export type TransportType =
+  | "car"
+  | "motorcycle"
+  | "bus"
+  | "van"
+  | "bicycle"
+  | "walking"
+  | "passenger"
+  // — daqui pra baixo: caminho proprio, nao a rota do grupo —
+  | "train"
+  | "plane"
+  | "boat"
+  | "other";
+
+/**
+ * Segue a rota compartilhada do grupo?
+ *
+ * Trem, aviao e barco nao passam pela estrada: projetar a posicao deles sobre a
+ * polyline daria "fora de rota" o tempo todo e distancias sem sentido. Para
+ * eles o que vale e a distancia direta ao destino e o horario de chegada — que
+ * e exatamente a pergunta do modo "encontrar em algum lugar" (§18).
+ *
+ * `other` fica de fora por seguranca: sem saber como a pessoa vai, medir por
+ * uma estrada que ela talvez nao use seria inventar informacao.
+ */
+export function isRoadBound(t: TransportType): boolean {
+  return (
+    t === "car" ||
+    t === "motorcycle" ||
+    t === "bus" ||
+    t === "van" ||
+    t === "bicycle" ||
+    t === "walking" ||
+    t === "passenger"
+  );
+}
 
 export type TripMode = "together" | "meet";
 
@@ -152,6 +193,8 @@ export interface GroupStatus {
 export interface Vehicle {
   /** id do membro que conduz */
   id: string;
+  /** segue a rota compartilhada do grupo (ver `isRoadBound`) */
+  roadBound: boolean;
   /** nome do condutor — e como o veiculo e chamado nas frases de status */
   displayName: string;
   transport: TransportType;

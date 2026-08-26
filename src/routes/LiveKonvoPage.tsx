@@ -4,6 +4,8 @@ import {
   ChevronLeft,
   Fuel,
   Navigation,
+  Layers3,
+  Map as MapIcon,
   Pause,
   Play,
   Toilet,
@@ -16,7 +18,7 @@ import { ActionBar } from "@/components/ActionBar";
 import { BottomSheet } from "@/components/BottomSheet";
 import { CallSheet } from "@/components/CallSheet";
 import { InviteSheet } from "@/components/InviteSheet";
-import { KonvoMap } from "@/components/KonvoMap";
+import { KonvoMap, type CameraMode } from "@/components/KonvoMap";
 import { ParticipantAvatar } from "@/components/ParticipantAvatar";
 import { StatusPill } from "@/components/StatusPill";
 import { useLiveTrip } from "@/hooks/useLiveTrip";
@@ -60,6 +62,7 @@ export function LiveKonvoPage({ demo = false }: Props) {
 
   const [scenario, setScenario] = useState<ScenarioId>("together");
   const [playing, setPlaying] = useState(true);
+  const [camera, setCamera] = useState<CameraMode>("overview");
 
   // Os dois hooks sao sempre chamados (regra dos hooks); o desativado nao faz
   // trabalho nenhum.
@@ -180,8 +183,28 @@ export function LiveKonvoPage({ demo = false }: Props) {
           route={live.route}
           vehicles={vehicles}
           destination={trip.destination}
+          camera={camera}
+          meId={me?.id ?? null}
           className=""
         />
+
+        {/* Alternar visao, como num app de navegacao: de cima para entender o
+            trajeto, atras do carro para dirigir. */}
+        <button
+          type="button"
+          onClick={() => setCamera((c) => (c === "overview" ? "follow" : "overview"))}
+          aria-label={t("live.camera")}
+          className="absolute right-3 top-3 flex h-11 items-center gap-2 rounded-pill bg-surface/95 px-3.5 font-bold shadow-card backdrop-blur active:bg-surface-2"
+        >
+          {camera === "overview" ? (
+            <Layers3 className="size-[18px] text-konvo-500" strokeWidth={2.4} />
+          ) : (
+            <MapIcon className="size-[18px] text-konvo-500" strokeWidth={2.4} />
+          )}
+          <span className="text-[13px]">
+            {camera === "overview" ? t("live.cameraFollow") : t("live.cameraTop")}
+          </span>
+        </button>
 
         {toast && (
           <div className="pointer-events-none absolute inset-x-4 top-3 rounded-pill bg-ink/90 px-4 py-2.5 text-center text-[13px] font-bold text-canvas">

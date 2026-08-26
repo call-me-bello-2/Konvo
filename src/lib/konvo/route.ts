@@ -212,3 +212,28 @@ export function sliceRoute(route: Route, fromM: number, toM: number): LatLng[] {
   out.push(pointAtDistance(route, toM));
   return out;
 }
+
+/**
+ * Direcao da rota no ponto a N metros do inicio, em graus (0 = norte).
+ *
+ * Usada pela camera em terceira pessoa. Vem da GEOMETRIA da rota, e nao do
+ * `heading` do GPS, de proposito: o heading do aparelho chega nulo em baixa
+ * velocidade e oscila com o carro parado — a camera ficaria girando sozinha no
+ * semaforo. A rota nao treme.
+ */
+export function bearingAt(route: Route, meters: number): number {
+  // Uma janela de 150 m suaviza o tracado: segmento a segmento, cada curva
+  // pequena da polyline viraria um solavanco na camera.
+  const WINDOW = 150;
+  const from = pointAtDistance(route, Math.max(0, meters - WINDOW / 2));
+  const to = pointAtDistance(route, Math.min(route.totalM, meters + WINDOW / 2));
+
+  const lat1 = from.lat * RAD;
+  const lat2 = to.lat * RAD;
+  const dLng = (to.lng - from.lng) * RAD;
+
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+
+  return (Math.atan2(y, x) * 180) / Math.PI;
+}

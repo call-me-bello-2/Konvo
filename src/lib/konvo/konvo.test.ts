@@ -10,7 +10,14 @@
 import { describe, expect, it } from "vitest";
 
 import fixture from "./__fixtures__/sp-ubatuba.json";
-import { buildRoute, decodePolyline, haversineM, pointAtDistance, projectOnRoute } from "./route";
+import {
+  bearingAt,
+  buildRoute,
+  decodePolyline,
+  haversineM,
+  pointAtDistance,
+  projectOnRoute,
+} from "./route";
 import { createDeriveContext, deriveMembers } from "./memberState";
 import { detectTransition, deriveGroupStatus } from "./groupStatus";
 import { formatAgo, formatDistance, formatDuration } from "./format";
@@ -105,6 +112,22 @@ describe("route", () => {
     const off = projectOnRoute(route, { lat: p.lat + 0.009, lng: p.lng });
     expect(off.offRouteM).toBeGreaterThan(800);
     expect(off.offRouteM).toBeLessThan(1200);
+  });
+
+  it("a direcao da rota aponta para o destino, nao para tras", () => {
+    // SP -> Ubatuba corre para LESTE: o rumo tem que ficar no semicirculo
+    // leste (0 a 180) na maior parte do caminho.
+    const leste = [0.2, 0.4, 0.6, 0.8]
+      .map((f) => bearingAt(route, route.totalM * f))
+      .filter((b) => b > 0 && b < 180);
+    expect(leste.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("a direcao muda pouco entre pontos proximos — camera nao pode tremer", () => {
+    const a = bearingAt(route, 100_000);
+    const b = bearingAt(route, 100_050);
+    const diff = Math.abs(((a - b + 540) % 360) - 180);
+    expect(diff).toBeLessThan(30);
   });
 
   it("o hint de indice nao muda o resultado", () => {
@@ -521,5 +544,76 @@ describe("deriveVehicles", () => {
     const status = deriveGroupStatus({ members: deriveVehicles(derived) });
     expect(status.kind).toBe("together");
     expect(status.subjectIds).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Transportes de caminho proprio (aviao, trem, barco)
+// ---------------------------------------------------------------------------
+
+describe("caminho próprio", () => {
+  it("quem voa não divide o grupo", () => {
+    // O aviao esta a 100 km da rota. Se entrasse na geometria do comboio, o
+    // app anunciaria "grupo dividido" — absurdo: ninguem vai encostar para
+    // esperar um aviao.
+    const p = pointAtDistance(route, 90_000);
+    const aviao = memberAt("aviao", 90_000, { name: "Tia", transport: "plane" });
+    aviao.fix = { ...aviao.fix!, lat: p.lat + 0.9, speed: 230 };
+
+    const { derived } = derive([
+      memberAt("a", 100_000, { name: "A" }),
+      memberAt("b", 99_500, { name: "B" }),
+      aviao,
+    ]);
+
+    const status = deriveGroupStatus({ members: deriveVehicles(derived) });
+    expect(status.kind).toBe("together");
+  });
+
+  it("quem voa nunca aparece como fora de rota", () => {
+    const p = pointAtDistance(route, 90_000);
+    const aviao = memberAt("aviao", 90_000, { transport: "plane" });
+    aviao.fix = { ...aviao.fix!, lat: p.lat + 0.9, speed: 230 };
+
+    const { derived } = derive([memberAt("a", 100_000), aviao]);
+    const v = derived.find((d) => d.id === "aviao")!;
+
+    expect(v.state).not.toBe("off_route");
+    expect(v.offRouteM).toBeNull();
+  });
+
+  it("a distância de quem voa é em linha reta, não pela estrada", () => {
+    // Perto do destino em linha reta, mas longe pela rota — o que importa
+    // para quem voa e a linha reta.
+    const aviao = memberAt("aviao", 20_000, { transport: "plane", speed: 230 });
+    aviao.fix = { ...aviao.fix!, lat: DEST.lat + 0.4, lng: DEST.lng };
+
+    const { derived } = derive([aviao]);
+    const v = derived[0];
+
+    // ~44 km em linha reta, contra ~207 km que faltariam pela estrada
+    expect(v.remainingM!).toBeLessThan(60_000);
+  });
+
+  it("todos chegaram inclui quem veio de avião", () => {
+    const { derived } = derive([
+      memberAt("a", route.totalM - 20),
+      memberAt("aviao", route.totalM - 20, { transport: "plane" }),
+    ]);
+    expect(deriveGroupStatus({ members: deriveVehicles(derived) }).kind).toBe("arrived");
+  });
+
+  it("passageiro continua seguindo a rota — só o veículo dele muda", () => {
+    const { derived } = derive([
+      memberAt("motorista", 100_000, { name: "Pedro" }),
+      memberAt("carona", 100_000, {
+        name: "Ana",
+        transport: "passenger",
+        ridingWith: "motorista",
+      }),
+    ]);
+    const carro = deriveVehicles(derived).find((v) => v.id === "motorista")!;
+    expect(carro.roadBound).toBe(true);
+    expect(carro.occupants).toHaveLength(2);
   });
 });

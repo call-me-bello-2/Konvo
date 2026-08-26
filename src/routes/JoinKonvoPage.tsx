@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Bike, Bus, Car, User } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ParticipantAvatar } from "@/components/ParticipantAvatar";
+import { TransportPicker } from "@/components/TransportPicker";
 import { useT } from "@/i18n";
 import { useSession } from "@/session";
 import { getMembers, getTripPreview, joinTrip, type TripPreview } from "@/lib/db/trips";
@@ -15,17 +15,6 @@ import type { TransportType, TripMember } from "@/lib/konvo/types";
  * Precisa ser a tela de menor atrito do app: quem abre isso normalmente esta
  * com pressa, no celular, prestes a sair. Pede nome e veiculo. Nada mais.
  */
-
-const TRANSPORTS: {
-  value: TransportType;
-  icon: typeof Car;
-  key: "transport.car" | "transport.motorcycle" | "transport.bus" | "transport.passenger";
-}[] = [
-  { value: "car", icon: Car, key: "transport.car" },
-  { value: "motorcycle", icon: Bike, key: "transport.motorcycle" },
-  { value: "bus", icon: Bus, key: "transport.bus" },
-  { value: "passenger", icon: User, key: "transport.passenger" },
-];
 
 export function JoinKonvoPage() {
   const { code } = useParams<{ code: string }>();
@@ -113,24 +102,7 @@ export function JoinKonvoPage() {
         <h2 className="mb-2 mt-6 text-[13px] font-extrabold uppercase tracking-[0.07em] text-ink-35">
           {t("new.howYouGo")}
         </h2>
-        <div className="grid grid-cols-4 gap-2">
-          {TRANSPORTS.map(({ value, icon: Icon, key }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setTransport(value)}
-              className={cn(
-                "flex h-[68px] flex-col items-center justify-center gap-1.5 rounded-card border font-bold",
-                transport === value
-                  ? "border-konvo-500 bg-konvo-50 text-konvo-500"
-                  : "border-hairline bg-surface text-ink-50",
-              )}
-            >
-              <Icon className="size-[22px]" strokeWidth={2.25} />
-              <span className="text-[11px]">{t(key)}</span>
-            </button>
-          ))}
-        </div>
+        <TransportPicker value={transport} onChange={setTransport} />
 
         {/* Passageiro escolhe de quem e o carro. E isso que faz a contagem de
             veiculos bater e o carro nao virar dois pinos no mesmo lugar. */}

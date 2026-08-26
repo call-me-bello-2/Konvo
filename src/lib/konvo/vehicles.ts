@@ -7,6 +7,7 @@
  * continua mostrando pessoas.
  */
 
+import { isRoadBound } from "./types";
 import type { DerivedMember, MemberState, Vehicle } from "./types";
 
 /**
@@ -58,6 +59,7 @@ export function deriveVehicles(members: DerivedMember[]): Vehicle[] {
       id: driver.id,
       displayName: driver.displayName,
       transport: driver.transport,
+      roadBound: isRoadBound(driver.transport),
       driver,
       passengers,
       occupants,

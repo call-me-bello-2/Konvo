@@ -207,6 +207,19 @@ export const en = {
   "new.phone": "Phone (optional)",
   "new.phoneCopy": "So the group can call you if the app fails",
   "live.stopRequested": "{name} asked to stop",
+
+  // --- transportes e camera ---
+  "transport.van": "Van",
+  "transport.bicycle": "Bicycle",
+  "transport.walking": "Walking",
+  "transport.train": "Train",
+  "transport.plane": "Plane",
+  "transport.boat": "Boat",
+  "member.ownWay": "Own way · {distance} to go",
+  "live.camera": "View",
+  "live.cameraTop": "Overhead",
+  "live.cameraFollow": "Follow",
+  "transport.ownWayNote": "You follow your own way — Konvo shows your distance and arrival time, and won't say the group split because of you.",
 } as const;
 
 export type TranslationKey = keyof typeof en;

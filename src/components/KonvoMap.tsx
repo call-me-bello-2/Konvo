@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef } from "react";
 import maplibregl, { type Map as MLMap, type Marker } from "maplibre-gl";
 
-import { participantColor } from "./ParticipantAvatar";
+import { buildVehicleMarker, updateVehicleMarker } from "./vehicleMarker";
 import { useTheme } from "@/theme";
 import type { LatLng, Vehicle } from "@/lib/konvo/types";
-import type { Route } from "@/lib/konvo/route";
+import { bearingAt, type Route } from "@/lib/konvo/route";
 
 /**
  * O mapa do Live Konvo.
@@ -23,16 +23,37 @@ import type { Route } from "@/lib/konvo/route";
 const STYLE_LIGHT = "https://tiles.openfreemap.org/styles/positron";
 const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
 
+/**
+ * Como a camera olha o mapa.
+ *
+ * `overview` mostra a rota inteira de cima — bom para entender onde o grupo
+ * esta no trajeto. `follow` gruda atras do proprio carro, inclinada, como um
+ * app de navegacao: e a visao util em movimento, porque o que vem pela frente
+ * fica em cima da tela.
+ */
+export type CameraMode = "overview" | "follow";
+
 interface Props {
   route: Route | null;
   vehicles: Vehicle[];
   destination: LatLng & { name: string };
-  /** centraliza neste veiculo quando o mapa carrega */
-  focusId?: string | null;
+  camera?: CameraMode;
+  /** veiculo que a camera segue no modo `follow` */
+  followId?: string | null;
+  /** desenha um anel a mais no proprio veiculo */
+  meId?: string | null;
   className?: string;
 }
 
-export function KonvoMap({ route, vehicles, destination, focusId, className }: Props) {
+export function KonvoMap({
+  route,
+  vehicles,
+  destination,
+  camera = "overview",
+  followId,
+  meId,
+  className,
+}: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const markers = useRef<Map<string, Marker>>(new Map());
@@ -68,6 +89,13 @@ export function KonvoMap({ route, vehicles, destination, focusId, className }: P
     });
 
     map.current = m;
+
+    // Handle de depuracao, so em desenvolvimento: permite inspecionar camera,
+    // camadas e fontes do console sem instrumentar o componente toda vez.
+    if (import.meta.env.DEV) {
+      (window as unknown as { __konvoMap?: MLMap }).__konvoMap = m;
+    }
+
     return () => {
       m.remove();
       map.current = null;
@@ -79,6 +107,8 @@ export function KonvoMap({ route, vehicles, destination, focusId, className }: P
   // --- trocar o basemap com o tema ----------------------------------------
 
   const appliedTheme = useRef(resolved);
+  /** ja animamos a entrada no modo seguir? */
+  const enteredFollow = useRef(false);
 
   useEffect(() => {
     const m = map.current;
@@ -169,7 +199,7 @@ export function KonvoMap({ route, vehicles, destination, focusId, className }: P
 
       let marker = markers.current.get(v.id);
       if (!marker) {
-        marker = new maplibregl.Marker({ element: buildMarkerEl(v) }).setLngLat([
+        marker = new maplibregl.Marker({ element: buildVehicleMarker(v) }).setLngLat([
           pos.lng,
           pos.lat,
         ]);
@@ -177,7 +207,7 @@ export function KonvoMap({ route, vehicles, destination, focusId, className }: P
         markers.current.set(v.id, marker);
       } else {
         marker.setLngLat([pos.lng, pos.lat]);
-        updateMarkerEl(marker.getElement(), v);
+        updateVehicleMarker(marker.getElement(), v, v.id === meId);
       }
     }
 
@@ -188,13 +218,13 @@ export function KonvoMap({ route, vehicles, destination, focusId, className }: P
         markers.current.delete(id);
       }
     }
-  }, [vehicles]);
+  }, [vehicles, meId]);
 
   // --- enquadrar todo mundo na primeira carga ------------------------------
 
   useEffect(() => {
     const m = map.current;
-    if (!m || fitted.current) return;
+    if (!m || fitted.current || camera !== "overview") return;
 
     const pts = vehicles.map((v) => v.source?.fix).filter(Boolean) as LatLng[];
     if (pts.length === 0) return;
@@ -204,17 +234,52 @@ export function KonvoMap({ route, vehicles, destination, focusId, className }: P
     for (const p of pts) bounds.extend([p.lng, p.lat]);
     bounds.extend([destination.lng, destination.lat]);
 
-    m.fitBounds(bounds, { padding: 64, maxZoom: 14, duration: 0 });
-  }, [vehicles, destination]);
+    // pitch/bearing vao JUNTO do fitBounds, e nao num easeTo separado: duas
+    // animacoes seguidas se cancelam, e a inclinacao ficaria presa ao voltar
+    // da visao em terceira pessoa.
+    m.fitBounds(bounds, { padding: 64, maxZoom: 14, duration: 0, pitch: 0, bearing: 0 });
+  }, [vehicles, destination, camera]);
 
-  // --- centralizar em alguem ----------------------------------------------
+  // --- camera ---------------------------------------------------------------
 
   useEffect(() => {
     const m = map.current;
-    if (!m || !focusId) return;
-    const pos = vehicles.find((v) => v.id === focusId)?.source?.fix;
-    if (pos) m.easeTo({ center: [pos.lng, pos.lat], zoom: 13, duration: 600 });
-  }, [focusId, vehicles]);
+    if (!m) return;
+
+    if (camera === "overview") {
+      // Reenquadrar e desinclinar acontecem no efeito do fitBounds, que roda
+      // logo em seguida; fazer aqui tambem so criaria duas animacoes brigando.
+      fitted.current = false;
+      enteredFollow.current = false;
+      return;
+    }
+
+    const target = vehicles.find((v) => v.id === (followId ?? meId)) ?? vehicles[0];
+    const pos = target?.source?.fix;
+    if (!pos) return;
+
+    // A direcao vem da ROTA, nao do `heading` do GPS: parado no semaforo o
+    // heading do aparelho oscila e a camera giraria sozinha.
+    const bearing =
+      route && target.distanceAlongM !== null && target.roadBound
+        ? bearingAt(route, target.distanceAlongM)
+        : (pos.heading ?? 0);
+
+    // A entrada no modo seguir e animada uma vez; dali em diante a camera
+    // acompanha instantaneamente, como num app de navegacao. Reanimar a cada
+    // atualizacao de posicao faria uma animacao cancelar a outra e a camera
+    // ficaria travada no lugar.
+    const first = !enteredFollow.current;
+    enteredFollow.current = true;
+
+    m.easeTo({
+      center: [pos.lng, pos.lat],
+      zoom: 15.5,
+      pitch: 58,
+      bearing,
+      duration: first ? 600 : 0,
+    });
+  }, [camera, followId, meId, vehicles, route]);
 
   // Posicionamento inline, e nao por classe: o CSS do MapLibre define
   // `.maplibregl-map { position: relative }` FORA de qualquer layer, e no
@@ -228,29 +293,4 @@ export function KonvoMap({ route, vehicles, destination, focusId, className }: P
       style={{ position: "absolute", inset: 0 }}
     />
   );
-}
-
-// ---------------------------------------------------------------------------
-
-function buildMarkerEl(v: Vehicle): HTMLElement {
-  const el = document.createElement("div");
-  el.className = "flex -space-x-2";
-  updateMarkerEl(el, v);
-  return el;
-}
-
-function updateMarkerEl(el: HTMLElement, v: Vehicle) {
-  const stale = v.state === "offline";
-
-  el.style.opacity = stale ? "0.45" : "1";
-  el.innerHTML = v.occupants
-    .map((o) => {
-      const color = participantColor(o.colorIndex);
-      const initial = (o.displayName.trim()[0] ?? "?").toUpperCase();
-      return `<span
-          class="grid size-8 place-items-center rounded-full text-[12px] font-bold text-white"
-          style="background:${color};box-shadow:0 0 0 2.5px var(--color-surface),0 1px 3px rgb(0 0 0 / .3)"
-        >${initial}</span>`;
-    })
-    .join("");
 }

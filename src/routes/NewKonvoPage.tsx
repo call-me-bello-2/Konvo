@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Bike, Bus, Car, ChevronLeft, Search, User } from "lucide-react";
+import { ChevronLeft, Search } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+import { TransportPicker } from "@/components/TransportPicker";
 import { useT } from "@/i18n";
 import { useSession } from "@/session";
 import { createTrip } from "@/lib/db/trips";
 import { searchPlaces, type Place } from "@/lib/services/geocode";
 import { fetchRoute } from "@/lib/services/routing";
-import { cn } from "@/lib/utils";
 import type { LatLng, TransportType, TripMode } from "@/lib/konvo/types";
 
 /**
@@ -17,13 +17,6 @@ import type { LatLng, TransportType, TripMode } from "@/lib/konvo/types";
  * NAO pede marca, modelo, placa ou foto do carro. Destino, nome, veiculo,
  * comeca. O resto pode existir um dia; nao muda a viagem de setembro.
  */
-
-const TRANSPORTS: { value: TransportType; icon: typeof Car; key: "transport.car" | "transport.motorcycle" | "transport.bus" | "transport.passenger" }[] = [
-  { value: "car", icon: Car, key: "transport.car" },
-  { value: "motorcycle", icon: Bike, key: "transport.motorcycle" },
-  { value: "bus", icon: Bus, key: "transport.bus" },
-  { value: "passenger", icon: User, key: "transport.passenger" },
-];
 
 export function NewKonvoPage() {
   const t = useT();
@@ -173,24 +166,7 @@ export function NewKonvoPage() {
 
         {/* --- veiculo ------------------------------------------------------- */}
         <Label>{t("new.howYouGo")}</Label>
-        <div className="grid grid-cols-4 gap-2">
-          {TRANSPORTS.map(({ value, icon: Icon, key }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setTransport(value)}
-              className={cn(
-                "flex h-[68px] flex-col items-center justify-center gap-1.5 rounded-card border font-bold",
-                transport === value
-                  ? "border-konvo-500 bg-konvo-50 text-konvo-500"
-                  : "border-hairline bg-surface text-ink-50",
-              )}
-            >
-              <Icon className="size-[22px]" strokeWidth={2.25} />
-              <span className="text-[11px]">{t(key)}</span>
-            </button>
-          ))}
-        </div>
+        <TransportPicker value={transport} onChange={setTransport} />
 
         {origin && (
           <p className="mt-3 text-[13px] font-semibold text-ink-35">{t("new.useMyLocation")}</p>

@@ -26,6 +26,13 @@ export interface GroupUnit {
   distanceAlongM: number | null;
   behindByS: number;
   etaS: number | null;
+  /**
+   * Segue a rota compartilhada. Quem vai de aviao, trem ou barco NAO entra na
+   * geometria do comboio: dizer que o grupo "se dividiu" porque alguem esta
+   * voando a 10 km de altura seria absurdo. Essa gente conta para "todos
+   * chegaram" e para o horario de chegada, e nao para junto/esticando/dividido.
+   */
+  roadBound?: boolean;
 }
 
 export interface GroupStatusInput {
@@ -53,9 +60,11 @@ export function deriveGroupStatus({
   const arrived = members.filter((m) => m.state === "arrived");
   const offline = members.filter((m) => m.state === "offline");
 
-  // Quem conta para a geometria do grupo: quem esta na estrada agora.
+  // Quem conta para a geometria do grupo: quem esta na estrada agora, e
+  // seguindo a MESMA rota.
   const live = members
     .filter((m) => m.state !== "offline" && m.state !== "arrived")
+    .filter((m) => m.roadBound !== false)
     .filter((m) => m.distanceAlongM !== null)
     .sort((a, b) => b.distanceAlongM! - a.distanceAlongM!); // da frente para tras
 
@@ -131,7 +140,12 @@ export function deriveGroupStatus({
   }
 
   // --- chegando ------------------------------------------------------------
-  const etas = live.map((m) => m.etaS).filter((e): e is number => e !== null);
+  // Chegada considera todo mundo, inclusive quem vem por caminho proprio: a
+  // pergunta "quando estaremos todos la" inclui quem esta no aviao.
+  const etas = members
+    .filter((m) => m.state !== "offline" && m.state !== "arrived")
+    .map((m) => m.etaS)
+    .filter((e): e is number => e !== null);
   if (etas.length > 0 && Math.max(...etas) <= T.member.arrivingS) {
     return {
       ...base,

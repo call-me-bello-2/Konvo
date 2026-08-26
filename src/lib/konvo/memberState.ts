@@ -7,6 +7,7 @@
 
 import { THRESHOLDS as T } from "./thresholds";
 import { projectOnRoute, haversineM, type Route } from "./route";
+import { isRoadBound } from "./types";
 import type { DerivedMember, LatLng, MemberState, TripMember } from "./types";
 
 /**
@@ -71,14 +72,25 @@ export function deriveMembers(members: TripMember[], ctx: DeriveContext): Derive
     let distanceAlongM = m.distanceAlongM;
     let offRouteM = m.offRouteM;
 
-    if (usable) {
+    // Quem vai de aviao, trem ou barco nao passa pela estrada do grupo:
+    // projetar a posicao na polyline daria "fora de rota" o tempo todo e
+    // distancias sem sentido. Para eles vale a distancia direta ao destino.
+    const roadBound = isRoadBound(m.transport);
+
+    if (usable && roadBound) {
       const p = projectOnRoute(route, usable, ctx.hints.get(m.id));
       ctx.hints.set(m.id, p.index);
       distanceAlongM = p.distanceAlongM;
       offRouteM = p.offRouteM;
+    } else if (usable) {
+      // Marco equivalente na rota, so para ordenar a lista: quanto falta em
+      // linha reta, convertido para "posicao" no mesmo eixo dos outros.
+      const direct = haversineM(usable, ctx.destination);
+      distanceAlongM = Math.max(0, route.totalM - direct);
+      offRouteM = null;
     }
 
-    return { m, usable, staleForMs, distanceAlongM, offRouteM };
+    return { m, usable, staleForMs, distanceAlongM, offRouteM, roadBound };
   });
 
   // --- passo 2: onde esta a frente do grupo ---------------------------------
@@ -88,16 +100,24 @@ export function deriveMembers(members: TripMember[], ctx: DeriveContext): Derive
   const leadM = live.length ? Math.max(...live.map((p) => p.distanceAlongM!)) : 0;
 
   // --- passo 3: estado individual ------------------------------------------
-  return projected.map(({ m, usable, staleForMs, distanceAlongM, offRouteM }) => {
-    const remainingM =
-      distanceAlongM === null ? null : Math.max(0, route.totalM - distanceAlongM);
+  return projected.map(({ m, usable, staleForMs, distanceAlongM, offRouteM, roadBound }) => {
+    // Em linha reta para quem tem caminho proprio; pela rota para o resto.
+    const remainingM = usable && !roadBound
+      ? haversineM(usable, ctx.destination)
+      : distanceAlongM === null
+        ? null
+        : Math.max(0, route.totalM - distanceAlongM);
 
     // velocidade util: a do GPS quando confiavel, senao a referencia do grupo
     const rawSpeed = usable?.speed ?? null;
+    // Aviao a 800 km/h nao pode herdar a velocidade media da estrada: o ETA
+    // sairia dez vezes maior. Para caminho proprio, so a leitura real vale.
     const speedMps =
       rawSpeed !== null && rawSpeed > T.fallback.minSpeedMps
         ? rawSpeed
-        : ctx.referenceSpeedMps;
+        : roadBound
+          ? ctx.referenceSpeedMps
+          : T.fallback.speedMps;
 
     const etaS = remainingM === null ? null : Math.round(remainingM / speedMps);
 
@@ -125,8 +145,9 @@ export function deriveMembers(members: TripMember[], ctx: DeriveContext): Derive
       staleForMs,
       hasFix: distanceAlongM !== null,
       stoppedForMs,
-      offRouteM,
-      behindByS,
+      // Sem rota compartilhada nao existe "fora de rota".
+      offRouteM: roadBound ? offRouteM : null,
+      behindByS: roadBound ? behindByS : 0,
     });
 
     return {
