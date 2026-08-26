@@ -4,22 +4,34 @@ import { createClient } from "@supabase/supabase-js";
  * Cliente Supabase.
  *
  * A chave usada aqui e a `publishable` — ela nasce para viver no bundle do
- * navegador, e quem protege os dados e o RLS, nao o segredo da chave. Se o RLS
- * estiver frouxo, esconder a chave nao salva nada.
+ * navegador, e quem protege os dados e o RLS, nao o segredo da chave.
  */
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!url || !key) {
-  // Falhar alto aqui e melhor do que descobrir na estrada que ninguem
-  // consegue entrar na viagem.
-  throw new Error(
-    "VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY sao obrigatorias. Copie .env.example para .env.",
-  );
-}
+/**
+ * O que falta configurar, se faltar alguma coisa.
+ *
+ * Isto NAO lanca excecao no carregamento do modulo, e a diferenca importa: um
+ * `throw` aqui derruba o React antes de qualquer coisa renderizar, e o
+ * resultado e uma tela branca sem uma linha de explicacao. Na estrada, um app
+ * que some sem dizer nada e pior do que um app que nao abre.
+ *
+ * Em vez disso o erro vira dado, a interface mostra o que falta, e o resto do
+ * app (inclusive o modo demonstracao) continua funcionando.
+ */
+export const configError: string | null = (() => {
+  const missing = [
+    !url && "VITE_SUPABASE_URL",
+    !key && "VITE_SUPABASE_ANON_KEY",
+  ].filter(Boolean);
 
-export const supabase = createClient(url, key, {
+  if (missing.length === 0) return null;
+  return `Faltando na Vercel: ${missing.join(", ")}. Variáveis VITE_* entram no BUILD — depois de cadastrar, e preciso um deploy novo.`;
+})();
+
+export const supabase = createClient(url ?? "https://missing.invalid", key ?? "missing", {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -44,15 +56,16 @@ export const supabase = createClient(url, key, {
  * identidade real no banco, e da para vincular a uma conta depois.
  */
 export async function ensureSession() {
+  if (configError) throw new Error(configError);
+
   const { data } = await supabase.auth.getSession();
   if (data.session) return data.session;
 
   const { data: created, error } = await supabase.auth.signInAnonymously();
   if (error) {
-    // O erro mais provavel aqui e o provider anonimo desligado no painel.
     throw new Error(
-      `Nao foi possivel criar a sessao: ${error.message}. ` +
-        "Confira se 'Anonymous sign-ins' esta habilitado em Authentication -> Providers.",
+      `Não foi possível criar a sessão: ${error.message}. ` +
+        "Confira se 'Anonymous sign-ins' está habilitado em Authentication → Providers.",
     );
   }
   return created.session;

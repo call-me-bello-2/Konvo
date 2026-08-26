@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 
 import { App } from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { I18nProvider } from "./i18n";
 import { ThemeProvider } from "./theme";
 import { SessionProvider } from "./session";
@@ -15,14 +16,16 @@ import "./styles.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <BrowserRouter>
-      <ThemeProvider>
-        <I18nProvider>
-          <SessionProvider>
-            <App />
-          </SessionProvider>
-        </I18nProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <ThemeProvider>
+          <I18nProvider>
+            <SessionProvider>
+              <App />
+            </SessionProvider>
+          </I18nProvider>
+        </ThemeProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   </StrictMode>,
 );
