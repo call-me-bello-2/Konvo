@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   AlertTriangle,
   ChevronLeft,
@@ -19,6 +19,7 @@ import { ParticipantAvatar } from "@/components/ParticipantAvatar";
 import { StatusPill } from "@/components/StatusPill";
 import { TalkButton } from "@/components/TalkButton";
 import { useLiveTrip } from "@/hooks/useLiveTrip";
+import { useVoiceNotes } from "@/hooks/useVoiceNotes";
 import { useI18n, useT } from "@/i18n";
 import { logEvent, markArrived, sendQuickAction } from "@/lib/db/live";
 import { navigationUrl } from "@/lib/services/routing";
@@ -48,6 +49,14 @@ export function LiveKonvoPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
 
   const { trip, me, vehicles, status } = live;
+
+  // Recados chegam e tocam sozinhos — quem dirige nao vai tocar na tela.
+  const nameOf = useCallback(
+    (memberId: string | null) =>
+      live.members.find((m) => m.id === memberId)?.displayName ?? "",
+    [live.members],
+  );
+  const { speaking } = useVoiceNotes(tripId, me?.id ?? null, nameOf);
 
   if (live.loading) {
     return <FullMessage>…</FullMessage>;
@@ -119,7 +128,13 @@ export function LiveKonvoPage() {
       </header>
 
       {/* --- avisos honestos ------------------------------------------------ */}
-      <Banners live={live} t={t} />
+      {speaking ? (
+        <div className="shrink-0 bg-konvo-500 px-4 py-2.5 text-[13px] font-bold text-white">
+          {t("live.isTalking", { name: speaking })}
+        </div>
+      ) : (
+        <Banners live={live} t={t} />
+      )}
 
       {/* --- mapa ------------------------------------------------------------ */}
       <div className="relative min-h-0 flex-1">
