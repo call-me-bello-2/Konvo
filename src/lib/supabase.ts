@@ -7,8 +7,10 @@ import { createClient } from "@supabase/supabase-js";
  * navegador, e quem protege os dados e o RLS, nao o segredo da chave.
  */
 
-const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// `.trim()` e proposital: uma variavel colada no painel da Vercel com espaco
+// ou quebra de linha no fim chega como string "cheia" mas invalida.
+const url = (import.meta.env.VITE_SUPABASE_URL ?? "").trim();
+const key = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? "").trim();
 
 /**
  * O que falta configurar, se faltar alguma coisa.
@@ -31,7 +33,11 @@ export const configError: string | null = (() => {
   return `Faltando na Vercel: ${missing.join(", ")}. Variáveis VITE_* entram no BUILD — depois de cadastrar, e preciso um deploy novo.`;
 })();
 
-export const supabase = createClient(url ?? "https://missing.invalid", key ?? "missing", {
+// `||` e nao `??`: uma variavel cadastrada com valor VAZIO na Vercel chega
+// como "", que passa direto pelo `??` e faz o createClient lancar
+// "supabaseKey is required" no import do modulo — antes de qualquer coisa
+// renderizar, e antes do ErrorBoundary existir. Ou seja: tela branca.
+export const supabase = createClient(url || "https://nao-configurado.invalid", key || "nao-configurado", {
   auth: {
     persistSession: true,
     autoRefreshToken: true,

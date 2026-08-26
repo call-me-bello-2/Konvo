@@ -1,25 +1,32 @@
-import { Bell } from "lucide-react";
+import { Bell, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { ParticipantAvatar } from "./ParticipantAvatar";
+import { useT } from "@/i18n";
 import { useTheme } from "@/theme";
 import { cn } from "@/lib/utils";
 
 /**
  * Top bar do app.
  *
- * Wordmark centralizado, esquerda livre, sino + avatar a direita. O wordmark e
- * a arte aprovada com transparencia real — nao um "K" generico (brief §02).
+ * Wordmark centralizado, `+` a esquerda, sino a direita. Tres elementos e o
+ * teto: cada coisa a mais aqui compete com o wordmark e a barra deixa de ser
+ * identidade para virar painel de controle.
+ *
+ * O avatar saiu de proposito. Ele nao fazia nada que a aba "Você" ja nao faca,
+ * e ocupava o mesmo canto que o sino — dois alvos colados, um deles inutil.
+ * O `+` no lugar dele vale mais: criar viagem e a acao mais frequente do app.
  */
 
 interface Props {
   unreadCount?: number;
-  user?: { name: string; colorIndex: number; avatarUrl?: string | null };
+  onNewKonvo?: () => void;
   className?: string;
 }
 
-export function KonvoHeader({ unreadCount = 0, user, className }: Props) {
+export function KonvoHeader({ unreadCount = 0, onNewKonvo, className }: Props) {
+  const t = useT();
   const { resolved } = useTheme();
+
   // O wordmark e arte de bitmap, nao texto: precisa de uma versao branca para
   // o fundo escuro. As duas saem da mesma arte original.
   const wordmark = resolved === "dark" ? "/brand/wordmark-white.png" : "/brand/wordmark.png";
@@ -31,8 +38,17 @@ export function KonvoHeader({ unreadCount = 0, user, className }: Props) {
         className,
       )}
     >
-      <div className="relative flex h-14 items-center px-4">
-        {/* O wordmark fica centrado na tela, nao no espaco que sobra — assim
+      <div className="relative flex h-14 items-center px-2">
+        <button
+          type="button"
+          onClick={onNewKonvo}
+          aria-label={t("nav.new")}
+          className="grid size-10 shrink-0 place-items-center rounded-full text-ink active:bg-surface-2"
+        >
+          <Plus className="size-[23px]" strokeWidth={2.5} />
+        </button>
+
+        {/* O wordmark fica centrado na TELA, nao no espaco que sobra — assim
             nao desliza quando o badge de notificacao aparece ou some. */}
         <Link
           to="/"
@@ -48,34 +64,19 @@ export function KonvoHeader({ unreadCount = 0, user, className }: Props) {
           />
         </Link>
 
-        <div className="ml-auto flex items-center gap-1">
-          <Link
-            to="/activity"
-            aria-label="Activity"
-            className="relative grid size-10 place-items-center rounded-full active:bg-surface-2"
-          >
-            <Bell className="size-[22px] text-ink" strokeWidth={2} />
-            {unreadCount > 0 && (
-              <span
-                className="absolute right-1.5 top-1.5 size-2.5 rounded-full bg-split ring-2 ring-canvas"
-                aria-label={`${unreadCount} new`}
-              />
-            )}
-          </Link>
-
-          <Link to="/you" aria-label="You" className="ml-0.5">
-            {user ? (
-              <ParticipantAvatar
-                name={user.name}
-                colorIndex={user.colorIndex}
-                avatarUrl={user.avatarUrl}
-                size="sm"
-              />
-            ) : (
-              <div className="size-8 rounded-full bg-surface-3" />
-            )}
-          </Link>
-        </div>
+        <Link
+          to="/activity"
+          aria-label={t("nav.activity")}
+          className="relative ml-auto grid size-10 shrink-0 place-items-center rounded-full active:bg-surface-2"
+        >
+          <Bell className="size-[22px] text-ink" strokeWidth={2} />
+          {unreadCount > 0 && (
+            <span
+              className="absolute right-1.5 top-1.5 size-2.5 rounded-full bg-split ring-2 ring-canvas"
+              aria-label={`${unreadCount}`}
+            />
+          )}
+        </Link>
       </div>
     </header>
   );

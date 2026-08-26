@@ -220,6 +220,7 @@ export const en = {
   "live.cameraTop": "Overhead",
   "live.cameraFollow": "Follow",
   "transport.ownWayNote": "You follow your own way — Konvo shows your distance and arrival time, and won't say the group split because of you.",
+  "transport.more": "More options",
 } as const;
 
 export type TranslationKey = keyof typeof en;

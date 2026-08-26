@@ -221,4 +221,5 @@ export const ptBR: Record<TranslationKey, string> = {
   "live.cameraTop": "De cima",
   "live.cameraFollow": "Seguir",
   "transport.ownWayNote": "Você segue caminho próprio — o Konvo mostra sua distância e horário de chegada, e não vai dizer que o grupo se dividiu por sua causa.",
+  "transport.more": "Mais opções",
 };

@@ -12,7 +12,7 @@ import { ProfilePage } from "./routes/ProfilePage";
 import { NewKonvoPage } from "./routes/NewKonvoPage";
 import { JoinKonvoPage } from "./routes/JoinKonvoPage";
 import { LiveKonvoPage } from "./routes/LiveKonvoPage";
-import { demoEvents, demoTrips, demoUser } from "./data/demo";
+import { demoEvents, demoTrips } from "./data/demo";
 
 /**
  * Casca do app.
@@ -40,7 +40,9 @@ export function App() {
 
   return (
     <div className="flex h-full flex-col bg-canvas">
-      {chrome && <KonvoHeader user={demoUser} unreadCount={unreadCount} />}
+      {chrome && (
+        <KonvoHeader unreadCount={unreadCount} onNewKonvo={() => setNewOpen(true)} />
+      )}
       {chrome && <SetupNotice />}
 
       {/* Telas de navegacao rolam dentro do main; Live, criacao e entrada sao
