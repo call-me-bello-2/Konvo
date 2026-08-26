@@ -78,9 +78,15 @@ export function KonvoMap({ route, vehicles, destination, focusId, className }: P
 
   // --- trocar o basemap com o tema ----------------------------------------
 
+  const appliedTheme = useRef(resolved);
+
   useEffect(() => {
     const m = map.current;
-    if (!m) return;
+    // Sem esta guarda, o primeiro render chamaria setStyle com o MESMO estilo
+    // que o mapa acabou de carregar — e setStyle descarta todas as fontes e
+    // camadas adicionadas, apagando a rota antes mesmo de ela aparecer.
+    if (!m || appliedTheme.current === resolved) return;
+    appliedTheme.current = resolved;
     m.setStyle(resolved === "dark" ? STYLE_DARK : STYLE_LIGHT);
   }, [resolved]);
 
@@ -121,7 +127,12 @@ export function KonvoMap({ route, vehicles, destination, focusId, className }: P
     };
 
     if (m.isStyleLoaded()) draw();
-    else m.once("styledata", draw);
+    // `style.load` dispara tambem depois de cada setStyle, que zera fontes e
+    // camadas. Sem reagir a ele, a rota some ao trocar claro/escuro.
+    m.on("style.load", draw);
+    return () => {
+      m.off("style.load", draw);
+    };
   }, [routeGeoJSON, resolved]);
 
   // --- destino -------------------------------------------------------------
@@ -205,7 +216,18 @@ export function KonvoMap({ route, vehicles, destination, focusId, className }: P
     if (pos) m.easeTo({ center: [pos.lng, pos.lat], zoom: 13, duration: 600 });
   }, [focusId, vehicles]);
 
-  return <div ref={container} className={className} />;
+  // Posicionamento inline, e nao por classe: o CSS do MapLibre define
+  // `.maplibregl-map { position: relative }` FORA de qualquer layer, e no
+  // Tailwind v4 as utilities vivem em `@layer utilities` — CSS sem layer vence
+  // CSS em layer, entao `absolute inset-0` seria ignorado e o mapa colapsaria
+  // para altura zero. Estilo inline ganha dos dois.
+  return (
+    <div
+      ref={container}
+      className={className}
+      style={{ position: "absolute", inset: 0 }}
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------

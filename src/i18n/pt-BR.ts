@@ -193,4 +193,19 @@ export const ptBR: Record<TranslationKey, string> = {
   "setup.needsDb": "Banco ainda não configurado",
   "setup.needsDbCopy": "Rode o SQL no Supabase e ligue o Anonymous sign-ins, depois recarregue.",
   "setup.retry": "Tentar de novo",
+
+  // --- barra de acao / demo ---
+  "live.attention": "Atenção",
+  "live.attentionCopy": "Vibra o celular de todos — use quando precisam olhar agora",
+  "live.attentionSent": "{name} está pedindo atenção",
+  "live.call": "Ligar",
+  "live.callNobody": "Ninguém colocou telefone",
+  "live.noPhone": "Sem número",
+  "live.demoBanner": "Demonstração — carros simulados na rota real",
+  "live.scenario": "Cenário",
+  "live.play": "Rodar",
+  "live.pause": "Pausar",
+  "new.phone": "Telefone (opcional)",
+  "new.phoneCopy": "Pro grupo te ligar se o app falhar",
+  "live.stopRequested": "{name} pediu pra parar",
 };

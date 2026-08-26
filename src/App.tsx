@@ -22,7 +22,7 @@ import { demoEvents, demoTrips, demoUser } from "./data/demo";
  * e uma barra de abas ali so tiraria espaco do que importa.
  */
 
-const FULLSCREEN = ["/konvo/", "/meet/", "/join/", "/new"];
+const FULLSCREEN = ["/konvo/", "/meet/", "/join/", "/new", "/demo"];
 
 export function App() {
   const { pathname } = useLocation();
@@ -41,9 +41,18 @@ export function App() {
   return (
     <div className="flex h-full flex-col bg-canvas">
       {chrome && <KonvoHeader user={demoUser} unreadCount={unreadCount} />}
-      <SetupNotice />
+      {chrome && <SetupNotice />}
 
-      <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      {/* Telas de navegacao rolam dentro do main; Live, criacao e entrada sao
+          layouts de tela cheia e precisam da altura toda — sem isto o mapa
+          nasce com altura zero. */}
+      <main
+        className={
+          chrome
+            ? "min-h-0 flex-1 overflow-y-auto overscroll-contain"
+            : "min-h-0 flex-1 overflow-hidden"
+        }
+      >
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/trips" element={<TripsPage />} />
@@ -52,6 +61,8 @@ export function App() {
           <Route path="/new" element={<NewKonvoPage />} />
           <Route path="/join/:code" element={<JoinKonvoPage />} />
           <Route path="/konvo/:tripId" element={<LiveKonvoPage />} />
+          {/* Demonstracao: carros simulados na rota real, sem precisar de banco. */}
+          <Route path="/demo" element={<LiveKonvoPage demo />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

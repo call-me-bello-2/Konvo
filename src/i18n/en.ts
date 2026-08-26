@@ -192,6 +192,21 @@ export const en = {
   "setup.needsDb": "Database not set up yet",
   "setup.needsDbCopy": "Run the SQL in Supabase and enable Anonymous sign-ins, then reload.",
   "setup.retry": "Try again",
+
+  // --- barra de acao / demo ---
+  "live.attention": "Attention",
+  "live.attentionCopy": "Buzzes everyone — use when they need to look now",
+  "live.attentionSent": "{name} is asking for attention",
+  "live.call": "Call",
+  "live.callNobody": "No one added a phone number",
+  "live.noPhone": "No number",
+  "live.demoBanner": "Demonstration — simulated cars on the real route",
+  "live.scenario": "Scenario",
+  "live.play": "Play",
+  "live.pause": "Pause",
+  "new.phone": "Phone (optional)",
+  "new.phoneCopy": "So the group can call you if the app fails",
+  "live.stopRequested": "{name} asked to stop",
 } as const;
 
 export type TranslationKey = keyof typeof en;

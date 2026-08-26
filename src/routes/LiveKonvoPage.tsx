@@ -3,26 +3,29 @@ import {
   AlertTriangle,
   ChevronLeft,
   Fuel,
-  MapPin,
   Navigation,
-  UserPlus,
+  Pause,
+  Play,
   Toilet,
+  UserPlus,
   UtensilsCrossed,
-  Users,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { ActionBar } from "@/components/ActionBar";
 import { BottomSheet } from "@/components/BottomSheet";
+import { CallSheet } from "@/components/CallSheet";
 import { InviteSheet } from "@/components/InviteSheet";
 import { KonvoMap } from "@/components/KonvoMap";
 import { ParticipantAvatar } from "@/components/ParticipantAvatar";
 import { StatusPill } from "@/components/StatusPill";
-import { TalkButton } from "@/components/TalkButton";
 import { useLiveTrip } from "@/hooks/useLiveTrip";
+import { useSimulatedTrip } from "@/hooks/useSimulatedTrip";
 import { useVoiceNotes } from "@/hooks/useVoiceNotes";
 import { useI18n, useT } from "@/i18n";
-import { logEvent, markArrived, sendQuickAction } from "@/lib/db/live";
+import { logEvent, sendQuickAction } from "@/lib/db/live";
 import { navigationUrl } from "@/lib/services/routing";
+import { SCENARIOS, SCENARIO_ORDER, type ScenarioId } from "@/lib/konvo/simulator";
 import { formatAgo, formatDistance, formatDuration, formatDurationShort } from "@/lib/konvo/format";
 import { cn } from "@/lib/utils";
 import type { QuickActionKind, Vehicle } from "@/lib/konvo/types";
@@ -31,57 +34,81 @@ import type { TranslationKey } from "@/i18n/en";
 /**
  * Live Konvo — a tela mais importante do produto (brief §11).
  *
- * Desenhada para ser lida de relance por quem esta dirigindo: o estado do grupo
- * em uma frase no topo, o mapa no meio, e uma folha embaixo com o que precisa
- * de acao. Nenhum calculo acontece aqui — tudo vem derivado de `useLiveTrip`.
+ * Estrutura, de cima para baixo:
+ *   1. quem esta junto, em uma frase
+ *   2. o mapa, ocupando a maior parte
+ *   3. as acoes, ao alcance do polegar
+ *   4. quem esta onde, em texto
+ *
+ * O mapa e o maior elemento, mas nao e o mais importante: o §31 diz que a
+ * pessoa nao deveria precisar interpretar pontinhos. A frase no topo e a
+ * resposta; o mapa e a confirmacao.
+ *
+ * Nenhum calculo acontece aqui — tudo vem derivado do hook.
  */
 
-export function LiveKonvoPage() {
+interface Props {
+  /** modo demonstracao: carros simulados sobre a rota real, sem banco */
+  demo?: boolean;
+}
+
+export function LiveKonvoPage({ demo = false }: Props) {
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
   const t = useT();
   const { locale } = useI18n();
 
-  const live = useLiveTrip(tripId);
+  const [scenario, setScenario] = useState<ScenarioId>("together");
+  const [playing, setPlaying] = useState(true);
+
+  // Os dois hooks sao sempre chamados (regra dos hooks); o desativado nao faz
+  // trabalho nenhum.
+  const real = useLiveTrip(demo ? undefined : tripId);
+  const sim = useSimulatedTrip(demo, scenario, playing);
+  const live = demo ? sim : real;
+
   const [actionsOpen, setActionsOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
-  const [confirmEmergency, setConfirmEmergency] = useState(false);
+  const [callOpen, setCallOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [confirmEmergency, setConfirmEmergency] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const { trip, me, vehicles, status } = live;
 
-  // Recados chegam e tocam sozinhos — quem dirige nao vai tocar na tela.
   const nameOf = useCallback(
     (memberId: string | null) =>
       live.members.find((m) => m.id === memberId)?.displayName ?? "",
     [live.members],
   );
-  const { speaking } = useVoiceNotes(tripId, me?.id ?? null, nameOf);
+  const { speaking } = useVoiceNotes(demo ? undefined : tripId, me?.id ?? null, nameOf);
 
-  if (live.loading) {
-    return <FullMessage>…</FullMessage>;
-  }
-  if (live.error || !trip) {
-    return <FullMessage>{live.error ?? t("join.notFound")}</FullMessage>;
-  }
+  if (live.loading) return <FullMessage>…</FullMessage>;
+  if (live.error || !trip) return <FullMessage>{live.error ?? t("join.notFound")}</FullMessage>;
 
-  const others = Math.max(0, vehicles.length - 1);
+  const flash = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2600);
+  };
+
+  const quick = async (kind: QuickActionKind, label: string) => {
+    setActionsOpen(false);
+    flash(label);
+    navigator.vibrate?.(20);
+    if (demo || !me || !tripId) return;
+    await sendQuickAction(tripId, me.id, kind, me.displayName).catch(() => {});
+  };
+
   const lead = vehicles.reduce<Vehicle | null>(
     (a, b) => (a === null || b.behindByM < a.behindByM ? b : a),
     null,
   );
 
-  const quick = async (kind: QuickActionKind) => {
-    if (!me || !tripId) return;
-    setActionsOpen(false);
-    await sendQuickAction(tripId, me.id, kind, me.displayName).catch(() => {});
-  };
-
   return (
     <div className="flex h-full flex-col bg-canvas">
-      {/* --- cabecalho ------------------------------------------------------ */}
+      {/* --- 1. cabecalho + estado do grupo --------------------------------- */}
       <header className="safe-top z-20 shrink-0 border-b border-hairline bg-canvas">
-        <div className="flex h-14 items-center gap-2 px-2">
+        <div className="flex h-14 items-center gap-1 px-2">
           <button
             type="button"
             onClick={() => navigate("/")}
@@ -93,14 +120,16 @@ export function LiveKonvoPage() {
           <div className="min-w-0 flex-1">
             <div className="truncate text-[17px] font-extrabold leading-tight">{trip.name}</div>
           </div>
-          <button
-            type="button"
-            onClick={() => setInviteOpen(true)}
-            aria-label={t("invite.title")}
-            className="grid size-10 shrink-0 place-items-center rounded-full active:bg-surface-2"
-          >
-            <UserPlus className="size-[21px]" strokeWidth={2.25} />
-          </button>
+          {!demo && (
+            <button
+              type="button"
+              onClick={() => setInviteOpen(true)}
+              aria-label={t("invite.title")}
+              className="grid size-10 shrink-0 place-items-center rounded-full active:bg-surface-2"
+            >
+              <UserPlus className="size-[21px]" strokeWidth={2.25} />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setNavOpen(true)}
@@ -111,8 +140,6 @@ export function LiveKonvoPage() {
           </button>
         </div>
 
-        {/* Estado do grupo logo abaixo do titulo: e a informacao que a pessoa
-            veio buscar, e tem que estar antes do mapa. */}
         {status && (
           <div className="flex items-center gap-2 px-4 pb-3">
             <StatusPill kind={status.kind} trailing={`${vehicles.length}`}>
@@ -123,116 +150,97 @@ export function LiveKonvoPage() {
                   : "",
               })}
             </StatusPill>
+            {lead?.remainingM != null && lead.etaS != null && (
+              <span className="tnum ml-auto shrink-0 text-[13px] font-bold text-ink-50">
+                {formatDistance(lead.remainingM, "km", locale)} ·{" "}
+                {formatDuration(lead.etaS, locale)}
+              </span>
+            )}
           </div>
         )}
       </header>
 
-      {/* --- avisos honestos ------------------------------------------------ */}
       {speaking ? (
         <div className="shrink-0 bg-konvo-500 px-4 py-2.5 text-[13px] font-bold text-white">
           {t("live.isTalking", { name: speaking })}
         </div>
       ) : (
-        <Banners live={live} t={t} />
+        !demo && <Banners live={real} t={t} />
       )}
 
-      {/* --- mapa ------------------------------------------------------------ */}
+      {demo && (
+        <div className="shrink-0 bg-konvo-50 px-4 py-2 text-[12px] font-bold text-konvo-700">
+          {t("live.demoBanner")}
+        </div>
+      )}
+
+      {/* --- 2. mapa --------------------------------------------------------- */}
       <div className="relative min-h-0 flex-1">
         <KonvoMap
           route={live.route}
           vehicles={vehicles}
           destination={trip.destination}
-          className="absolute inset-0"
+          className=""
         />
-      </div>
 
-      {/* --- folha inferior -------------------------------------------------- */}
-      <div className="safe-bottom z-20 shrink-0 border-t border-hairline bg-surface px-4 pb-3 pt-3">
-        <div className="mb-3 flex items-baseline justify-between gap-3">
-          <div className="text-[13px] font-bold text-ink-70">
-            {t("count.people", { count: live.members.length })} ·{" "}
-            {t("count.vehicles", { count: vehicles.length })}
+        {toast && (
+          <div className="pointer-events-none absolute inset-x-4 top-3 rounded-pill bg-ink/90 px-4 py-2.5 text-center text-[13px] font-bold text-canvas">
+            {toast}
           </div>
-          {lead?.remainingM != null && lead.etaS != null && (
-            <div className="tnum text-[13px] font-bold text-ink-70">
-              {formatDistance(lead.remainingM, "km", locale)}
-              <span className="mx-1.5 text-ink-35">·</span>
-              {formatDuration(lead.etaS, locale)}
-            </div>
-          )}
-        </div>
+        )}
 
-        <div className="mb-3 flex gap-2">
-          {me && tripId && (
-            <TalkButton
-              tripId={tripId}
-              memberId={me.id}
-              listenerCount={others}
-              idleLabel={t("live.holdToTalk")}
-              label={(n) => t("live.talkingTo", { count: n })}
-            />
-          )}
-          <button
-            type="button"
-            onClick={() => setActionsOpen(true)}
-            aria-label={t("live.quickActions")}
-            className="grid size-14 shrink-0 place-items-center rounded-pill bg-surface-2 text-ink-70 active:bg-surface-3"
-          >
-            <Users className="size-6" strokeWidth={2.25} />
-          </button>
-        </div>
-
-        <GroupList vehicles={vehicles} t={t} locale={locale} />
+        {demo && (
+          <DemoControls
+            scenario={scenario}
+            onScenario={setScenario}
+            playing={playing}
+            onPlaying={setPlaying}
+            t={t}
+          />
+        )}
       </div>
 
-      {/* --- acoes rapidas (brief §15) --------------------------------------- */}
-      <BottomSheet
-        open={actionsOpen}
-        onOpenChange={setActionsOpen}
-        title={t("live.quickActions")}
-      >
+      {/* --- 3. acoes + 4. quem esta onde ------------------------------------ */}
+      <div className="safe-bottom z-20 shrink-0 border-t border-hairline bg-surface px-4 pb-3 pt-3">
+        <ActionBar
+          tripId={tripId ?? "demo"}
+          memberId={me?.id ?? null}
+          listenerCount={Math.max(0, vehicles.length - 1)}
+          demo={demo}
+          onAttention={() => void quick("attention", t("live.attention"))}
+          onCall={() => setCallOpen(true)}
+          onStop={() => setActionsOpen(true)}
+        />
+
+        <div className="mt-3 border-t border-hairline pt-2">
+          <GroupList vehicles={vehicles} t={t} locale={locale} />
+        </div>
+      </div>
+
+      {/* --- folhas ---------------------------------------------------------- */}
+      <BottomSheet open={actionsOpen} onOpenChange={setActionsOpen} title={t("live.quickActions")}>
         <div className="grid grid-cols-2 gap-2.5">
-          <QuickButton icon={Fuel} label={t("quick.gas")} onClick={() => void quick("gas")} />
-          <QuickButton icon={Toilet} label={t("quick.bathroom")} onClick={() => void quick("bathroom")} />
-          <QuickButton icon={UtensilsCrossed} label={t("quick.food")} onClick={() => void quick("food")} />
-          <QuickButton icon={MapPin} label={t("quick.stop")} onClick={() => void quick("stop")} />
+          <QuickButton icon={Fuel} label={t("quick.gas")} onClick={() => void quick("gas", t("quick.gas"))} />
+          <QuickButton icon={Toilet} label={t("quick.bathroom")} onClick={() => void quick("bathroom", t("quick.bathroom"))} />
+          <QuickButton icon={UtensilsCrossed} label={t("quick.food")} onClick={() => void quick("food", t("quick.food"))} />
+          <QuickButton icon={Play} label={t("quick.ok")} onClick={() => void quick("ok", t("quick.ok"))} />
         </div>
 
-        <div className="mt-3 flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={() => void quick("ok")}
-            className="h-12 rounded-card bg-together-soft font-bold text-together-ink active:opacity-80"
-          >
-            {t("quick.ok")}
-          </button>
-
-          {/* Emergencia separada e vermelha, e com confirmacao: toque acidental
-              nao pode alarmar a familia inteira na estrada. */}
-          <button
-            type="button"
-            onClick={() => setConfirmEmergency(true)}
-            className="flex h-12 items-center justify-center gap-2 rounded-card bg-split-soft font-bold text-split-ink active:opacity-80"
-          >
-            <AlertTriangle className="size-[18px]" strokeWidth={2.5} />
-            {t("live.emergency")}
-          </button>
-        </div>
-
+        {/* Emergencia separada, vermelha e com confirmacao: toque acidental nao
+            pode alarmar a familia inteira na estrada. */}
         <button
           type="button"
-          onClick={async () => {
-            if (!me) return;
+          onClick={() => {
             setActionsOpen(false);
-            await markArrived(me.id).catch(() => {});
+            setConfirmEmergency(true);
           }}
-          className="mt-4 w-full py-2 text-[14px] font-bold text-ink-50"
+          className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-card bg-split-soft font-bold text-split-ink active:opacity-80"
         >
-          {t("live.arrived")}
+          <AlertTriangle className="size-[18px]" strokeWidth={2.5} />
+          {t("live.emergency")}
         </button>
       </BottomSheet>
 
-      {/* --- confirmacao de emergencia --------------------------------------- */}
       <BottomSheet
         open={confirmEmergency}
         onOpenChange={setConfirmEmergency}
@@ -244,16 +252,17 @@ export function LiveKonvoPage() {
             type="button"
             onClick={async () => {
               setConfirmEmergency(false);
-              if (!me || !tripId) return;
+              flash(t("live.emergency"));
+              navigator.vibrate?.([100, 60, 100]);
+              if (demo || !me || !tripId) return;
               await logEvent(tripId, me.id, "quick_action", {
                 kind: "problem",
                 name: me.displayName,
                 lat: live.myFix?.lat,
                 lng: live.myFix?.lng,
               }).catch(() => {});
-              navigator.vibrate?.([100, 60, 100]);
             }}
-            className="h-13 rounded-card bg-split py-3.5 font-extrabold text-white active:opacity-90"
+            className="rounded-card bg-split py-3.5 font-extrabold text-white active:opacity-90"
           >
             {t("live.confirm")}
           </button>
@@ -267,14 +276,22 @@ export function LiveKonvoPage() {
         </div>
       </BottomSheet>
 
-      <InviteSheet
-        open={inviteOpen}
-        onOpenChange={setInviteOpen}
-        tripName={trip.name}
-        code={trip.code}
+      <CallSheet
+        open={callOpen}
+        onOpenChange={setCallOpen}
+        members={live.members}
+        meId={me?.id ?? null}
       />
 
-      {/* --- navegar (brief §17) --------------------------------------------- */}
+      {!demo && (
+        <InviteSheet
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          tripName={trip.name}
+          code={trip.code}
+        />
+      )}
+
       <BottomSheet open={navOpen} onOpenChange={setNavOpen} title={t("live.openWith")}>
         <div className="flex flex-col gap-2">
           {(["waze", "gmaps"] as const).map((app) => (
@@ -297,6 +314,55 @@ export function LiveKonvoPage() {
 
 // ---------------------------------------------------------------------------
 
+/** Painel de simulacao (brief §27) — so no modo demonstracao. */
+function DemoControls({
+  scenario,
+  onScenario,
+  playing,
+  onPlaying,
+  t,
+}: {
+  scenario: ScenarioId;
+  onScenario: (s: ScenarioId) => void;
+  playing: boolean;
+  onPlaying: (p: boolean) => void;
+  t: (k: TranslationKey) => string;
+}) {
+  return (
+    <div className="absolute inset-x-3 bottom-3 rounded-card bg-surface/95 p-2 shadow-card backdrop-blur">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onPlaying(!playing)}
+          aria-label={playing ? t("live.pause") : t("live.play")}
+          className="grid size-9 shrink-0 place-items-center rounded-full bg-konvo-500 text-white"
+        >
+          {playing ? (
+            <Pause className="size-[17px]" strokeWidth={2.5} />
+          ) : (
+            <Play className="size-[17px]" strokeWidth={2.5} />
+          )}
+        </button>
+        <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto">
+          {SCENARIO_ORDER.map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onScenario(id)}
+              className={cn(
+                "shrink-0 rounded-pill px-3 py-1.5 text-[12px] font-bold",
+                scenario === id ? "bg-konvo-500 text-white" : "bg-surface-2 text-ink-50",
+              )}
+            >
+              {SCENARIOS[id].label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Banners({
   live,
   t,
@@ -304,8 +370,7 @@ function Banners({
   live: ReturnType<typeof useLiveTrip>;
   t: (k: TranslationKey, v?: Record<string, string | number>) => string;
 }) {
-  // A interface nunca finge que esta tudo bem: sem permissao, sem sinal ou com
-  // posicoes na fila, quem esta olhando precisa saber.
+  // A interface nunca finge que esta tudo bem.
   if (live.permission === "denied") {
     return (
       <Banner tone="split">
@@ -317,9 +382,7 @@ function Banners({
     return (
       <Banner tone="stretching">
         <strong>{t("conn.offline")}</strong>{" "}
-        {live.queued > 0
-          ? t("live.offlineQueued", { count: live.queued })
-          : t("conn.offlineDetail")}
+        {live.queued > 0 ? t("live.offlineQueued", { count: live.queued }) : t("conn.offlineDetail")}
       </Banner>
     );
   }
@@ -354,13 +417,14 @@ function GroupList({
   const sorted = [...vehicles].sort((a, b) => a.behindByM - b.behindByM);
 
   return (
-    <div className="max-h-[26dvh] overflow-y-auto overscroll-contain">
+    <div className="max-h-[22dvh] overflow-y-auto overscroll-contain">
       {sorted.map((v) => (
         <div key={v.id} className="flex items-center gap-3 py-2">
           <ParticipantAvatar
             name={v.driver.displayName}
             colorIndex={v.driver.colorIndex}
             size="sm"
+            short
             state={v.state}
           />
           <div className="min-w-0 flex-1">
@@ -398,7 +462,7 @@ function describe(
   if (v.state === "off_route") return t("member.offRoute");
   if (v.behindByS < 30) return v.driver.isLeader ? t("member.leader") : t("member.onRoute");
 
-  // Tempo primeiro, distancia como apoio: e o que a pessoa realmente quer saber.
+  // Tempo primeiro, distancia como apoio: e o que a pessoa quer saber.
   return `${t("member.behindTime", { time: formatDurationShort(v.behindByS) })} · ${formatDistance(
     v.behindByM,
     "km",

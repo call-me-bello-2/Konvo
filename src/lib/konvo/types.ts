@@ -197,6 +197,7 @@ export interface TripEvent {
 }
 
 export type QuickActionKind =
+  | "attention"
   | "gas"
   | "bathroom"
   | "food"
