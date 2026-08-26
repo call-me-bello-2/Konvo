@@ -14,6 +14,7 @@
  */
 
 import { supabase } from "@/lib/supabase";
+import { withAuthRetry } from "@/lib/authRecovery";
 import { THRESHOLDS as T } from "@/lib/konvo/thresholds";
 import { toMember, type MemberRow } from "./trips";
 import type { Fix, QuickActionKind, TripMember } from "@/lib/konvo/types";
@@ -107,7 +108,8 @@ export async function persistPosition(
   if (!force && now - prev < T.publish.dbUpsertIntervalMs) return;
   lastWrite.set(memberId, now);
 
-  const { error } = await supabase
+  const { error } = await withAuthRetry(async () =>
+    supabase
     .from("trip_members")
     .update({
       lat: fix.lat,
@@ -121,7 +123,8 @@ export async function persistPosition(
       state: derived.state,
       last_seen_at: new Date(now).toISOString(),
     })
-    .eq("id", memberId);
+      .eq("id", memberId),
+  );
 
   if (error) throw error;
 }

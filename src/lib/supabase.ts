@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
+import { clockSkewSeconds } from "./authRecovery";
+
 /**
  * Cliente Supabase.
  *
@@ -65,7 +67,18 @@ export async function ensureSession() {
   if (configError) throw new Error(configError);
 
   const { data } = await supabase.auth.getSession();
-  if (data.session) return data.session;
+
+  if (data.session) {
+    // Token com horario de emissao no futuro (relogio do aparelho adiantado)
+    // faz o Postgres recusar TUDO com "JWT issued at future". Melhor detectar
+    // aqui e trocar por um novo do que deixar cada consulta falhar depois.
+    const skew = clockSkewSeconds(data.session.access_token);
+    if (skew !== null && skew < -5) {
+      await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+    } else {
+      return data.session;
+    }
+  }
 
   const { data: created, error } = await supabase.auth.signInAnonymously();
   if (error) {

@@ -2,8 +2,8 @@ import { useState } from "react";
 import { ChevronRight, LogOut, Phone } from "lucide-react";
 
 import { ParticipantAvatar } from "@/components/ParticipantAvatar";
-import { demoProfile } from "@/data/demo";
 import { useI18n, useT } from "@/i18n";
+import { useSession } from "@/session";
 import { cn } from "@/lib/utils";
 import { useTheme, type ThemeMode } from "@/theme";
 import type { Locale } from "@/i18n";
@@ -24,11 +24,13 @@ export function ProfilePage() {
   const { locale, setLocale } = useI18n();
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
 
-  const [nav, setNav] = useState(demoProfile.navigateWith);
-  const [unit, setUnit] = useState(demoProfile.distanceUnit);
-  const [shareOnlyDuringTrips, setShareOnlyDuringTrips] = useState(
-    demoProfile.shareOnlyDuringTrips,
-  );
+  const { displayName, setDisplayName } = useSession();
+
+  // Preferencias ficam no aparelho: sao de quem esta segurando o celular, nao
+  // da conta. Guardar no banco exigiria conta de verdade e nao mudaria nada.
+  const [nav, setNav] = useState<"waze" | "gmaps">("waze");
+  const [unit, setUnit] = useState<"km" | "mi">("km");
+  const [shareOnlyDuringTrips, setShareOnlyDuringTrips] = useState(true);
 
   return (
     <div className="px-4 pb-8 pt-4">
@@ -37,16 +39,13 @@ export function ProfilePage() {
       </h1>
 
       <div className="mb-6 flex items-center gap-3.5">
-        <ParticipantAvatar
-          name={demoProfile.name}
-          colorIndex={demoProfile.colorIndex}
-          size="lg"
+        <ParticipantAvatar name={displayName || "?"} colorIndex={1} size="lg" />
+        <input
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          placeholder={t("new.yourName")}
+          className="min-w-0 flex-1 bg-transparent text-[20px] font-extrabold leading-tight outline-none placeholder:text-ink-35"
         />
-        <div className="min-w-0">
-          <div className="truncate text-[20px] font-extrabold leading-tight">
-            {demoProfile.name}
-          </div>
-        </div>
       </div>
 
       {/* --- preferencias que a viagem usa ---------------------------------- */}

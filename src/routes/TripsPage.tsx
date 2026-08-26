@@ -1,43 +1,33 @@
-import { useMemo } from "react";
-
+import { ChevronMotif } from "@/components/ChevronMotif";
 import { TripCard } from "@/components/TripCard";
-import { demoMembers, demoRoute, demoTrips } from "@/data/demo";
-import { useT } from "@/i18n";
-import { deriveGroupStatus } from "@/lib/konvo/groupStatus";
-import { createDeriveContext, deriveMembers } from "@/lib/konvo/memberState";
-import { routeFromPolyline } from "@/lib/konvo/route";
-import { deriveVehicles } from "@/lib/konvo/vehicles";
-import type { TranslationKey } from "@/i18n/en";
+import { useMyTrips } from "@/hooks/useMyTrips";
+import { useI18n, useT } from "@/i18n";
+import { formatDistance } from "@/lib/konvo/format";
 
 /**
  * Trips (brief §19).
  *
- * A lista e deliberadamente rasa: o peso do design esta em `TripDetail`, que e
- * onde se mexe na viagem antes de sair. Aqui a pessoa so escolhe qual.
+ * A lista e deliberadamente rasa: quem chega aqui so quer escolher qual viagem
+ * abrir. O peso do design fica na tela da viagem, nao na lista.
  */
 
 export function TripsPage() {
   const t = useT();
+  const { locale } = useI18n();
+  const { active, upcoming, past, loading } = useMyTrips();
 
-  const active = demoTrips.filter((tr) => tr.status === "active");
-  const upcoming = demoTrips.filter((tr) => tr.status === "upcoming");
-  const past = demoTrips.filter((tr) => tr.status === "completed");
+  if (loading) {
+    return (
+      <div className="grid h-full place-items-center">
+        <ChevronMotif className="opacity-40" />
+      </div>
+    );
+  }
 
-  // O status da viagem ativa sai da logica real, sobre veiculos.
-  const liveStatus = useMemo(() => {
-    const route = routeFromPolyline(demoRoute.polyline);
-    const ctx = createDeriveContext(route, demoRoute.destination, demoRoute.durationS);
-    const vehicles = deriveVehicles(deriveMembers(demoMembers(), ctx));
-    return deriveGroupStatus({ members: vehicles });
-  }, []);
-
-  const isEmpty = demoTrips.length === 0;
-
-  if (isEmpty) {
+  if (active.length + upcoming.length + past.length === 0) {
     return (
       <div className="grid h-full place-items-center px-10 text-center">
         <div>
-          {/* Geometria da marca, nao ilustracao de banco de imagem (§33). */}
           <ChevronMotif className="mx-auto mb-5" />
           <h2 className="text-[20px] font-extrabold">{t("empty.trips.title")}</h2>
           <p className="mt-1.5 text-[14px] font-semibold text-ink-50">
@@ -56,19 +46,15 @@ export function TripsPage() {
 
       {active.length > 0 && (
         <Section title={t("trips.active")}>
-          {active.map((tr) => (
+          {active.map((s) => (
             <TripCard
-              key={tr.id}
-              to={`/konvo/${tr.id}`}
-              name={tr.name}
-              detail={`${t("count.people", { count: tr.peopleCount })} · ${t("count.vehicles", {
-                count: tr.vehicleCount ?? 0,
+              key={s.trip.id}
+              to={`/konvo/${s.trip.id}`}
+              name={s.trip.name}
+              detail={`${t("count.people", { count: s.peopleCount })} · ${t("count.vehicles", {
+                count: s.vehicleCount,
               })}`}
               variant="active"
-              status={{
-                kind: liveStatus.kind,
-                label: t(liveStatus.headlineKey as TranslationKey, liveStatus.headlineValues),
-              }}
             />
           ))}
         </Section>
@@ -76,12 +62,12 @@ export function TripsPage() {
 
       {upcoming.length > 0 && (
         <Section title={t("trips.upcoming")}>
-          {upcoming.map((tr) => (
+          {upcoming.map((s) => (
             <TripCard
-              key={tr.id}
-              to={`/trips/${tr.id}`}
-              name={tr.name}
-              detail={`${tr.whenLabel} · ${t("count.people", { count: tr.peopleCount })}`}
+              key={s.trip.id}
+              to={`/trips/${s.trip.id}`}
+              name={s.trip.name}
+              detail={t("count.people", { count: s.peopleCount })}
             />
           ))}
         </Section>
@@ -89,12 +75,16 @@ export function TripsPage() {
 
       {past.length > 0 && (
         <Section title={t("trips.past")}>
-          {past.map((tr) => (
+          {past.map((s) => (
             <TripCard
-              key={tr.id}
-              to={`/trips/${tr.id}`}
-              name={tr.name}
-              detail={`${t("count.people", { count: tr.peopleCount })} · ${tr.distanceLabel}`}
+              key={s.trip.id}
+              to={`/trips/${s.trip.id}`}
+              name={s.trip.name}
+              detail={`${t("count.people", { count: s.peopleCount })}${
+                s.trip.routeDistanceM
+                  ? ` · ${formatDistance(s.trip.routeDistanceM, "km", locale)}`
+                  : ""
+              }`}
               variant="past"
             />
           ))}
@@ -112,34 +102,5 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       </h2>
       <div className="flex flex-col gap-2">{children}</div>
     </section>
-  );
-}
-
-/**
- * O chevron da marca repetido (brief §34): `<` `<<` `<<<` comunica seguir,
- * mover, progredir. Usado nos vazios e nas transicoes.
- */
-export function ChevronMotif({ className }: { className?: string }) {
-  return (
-    <svg
-      width="72"
-      height="34"
-      viewBox="0 0 72 34"
-      fill="none"
-      className={className}
-      aria-hidden="true"
-    >
-      {[0, 1, 2].map((i) => (
-        <path
-          key={i}
-          d={`M${10 + i * 22} 6 L${25 + i * 22} 17 L${10 + i * 22} 28`}
-          stroke="var(--color-konvo-500)"
-          strokeWidth={5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity={0.25 + i * 0.32}
-        />
-      ))}
-    </svg>
   );
 }

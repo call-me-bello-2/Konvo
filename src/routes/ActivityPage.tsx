@@ -1,65 +1,98 @@
-import { useState } from "react";
-import {
-  Flag,
-  Fuel,
-  MapPin,
-  PauseCircle,
-  SplitSquareHorizontal,
-  UserPlus,
-  Users,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Flag, Fuel, MapPin, PauseCircle, Split, UserPlus, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { ChevronMotif } from "./TripsPage";
-import { ParticipantAvatar, participantColor } from "@/components/ParticipantAvatar";
-import { demoEvents, type DemoEvent } from "@/data/demo";
+import { ChevronMotif } from "@/components/ChevronMotif";
+import { supabase } from "@/lib/supabase";
 import { useI18n, useT } from "@/i18n";
+import { useSession } from "@/session";
 import { formatAgo } from "@/lib/konvo/format";
 import { cn } from "@/lib/utils";
-import type { TFn } from "@/i18n";
 import type { TranslationKey } from "@/i18n/en";
 
 /**
  * Activity (brief §21) — caixa de entrada, nao feed social.
  *
- * Unifica o sino da top bar com a aba: um lugar so para "o que aconteceu".
- * Eventos de todas as viagens, com nao-lidos, e botao nos que pedem decisao.
- *
- * Sem posts, curtidas, seguidores ou metricas publicas (§35).
+ * O que aconteceu nas viagens da pessoa, em ordem. Sem posts, curtidas,
+ * seguidores ou metricas publicas (§35).
  */
 
-const ICON: Record<DemoEvent["type"], typeof MapPin> = {
+interface EventRow {
+  id: string;
+  type: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+  trip_id: string;
+  trips: { name: string } | null;
+  trip_members: { display_name: string } | null;
+}
+
+const ICON: Record<string, typeof MapPin> = {
   member_joined: UserPlus,
-  stop_proposed: Fuel,
+  member_left: UserPlus,
+  trip_started: Flag,
+  trip_completed: Flag,
+  stop_proposed: MapPin,
   stop_accepted: MapPin,
-  group_split: SplitSquareHorizontal,
+  quick_action: Fuel,
+  group_split: Split,
   group_rejoined: Users,
   member_stopped: PauseCircle,
-  trip_completed: Flag,
-  quick_action: Fuel,
+  member_arrived: Flag,
+  voice_note: Users,
 };
 
-const LABEL: Record<DemoEvent["type"], TranslationKey> = {
+const LABEL: Record<string, TranslationKey> = {
   member_joined: "event.memberJoined",
+  member_left: "event.memberLeft",
+  trip_started: "event.tripStarted",
+  trip_completed: "event.tripCompleted",
   stop_proposed: "event.stopProposed",
   stop_accepted: "event.stopAccepted",
+  quick_action: "event.stopProposed",
   group_split: "event.groupSplit",
   group_rejoined: "event.groupRejoined",
   member_stopped: "event.memberStopped",
-  trip_completed: "event.tripCompleted",
-  quick_action: "event.stopProposed",
+  member_arrived: "event.memberArrived",
+  voice_note: "event.voiceNote",
 };
 
 export function ActivityPage() {
   const t = useT();
   const { locale } = useI18n();
+  const { userId, loading: sessionLoading } = useSession();
 
-  // Marcar como lido e local por enquanto; vai virar `activity_read_at` no
-  // membro assim que o Supabase estiver ligado.
-  const [readIds, setReadIds] = useState<Set<string>>(new Set());
-  const unread = demoEvents.filter((e) => e.unread && !readIds.has(e.id));
+  const [events, setEvents] = useState<EventRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (demoEvents.length === 0) {
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    // O RLS ja limita aos eventos das viagens da pessoa.
+    supabase
+      .from("trip_events")
+      .select("*, trips(name), trip_members(display_name)")
+      .order("created_at", { ascending: false })
+      .limit(60)
+      .then(({ data }) => {
+        setEvents((data as EventRow[] | null) ?? []);
+        setLoading(false);
+      });
+  }, [userId, sessionLoading]);
+
+  if (loading) {
+    return (
+      <div className="grid h-full place-items-center">
+        <ChevronMotif className="opacity-40" />
+      </div>
+    );
+  }
+
+  if (events.length === 0) {
     return (
       <div className="grid h-full place-items-center px-10 text-center">
         <div>
@@ -75,122 +108,40 @@ export function ActivityPage() {
 
   return (
     <div className="px-4 pb-6 pt-4">
-      <div className="mb-4 flex items-baseline justify-between gap-3">
-        <h1 className="text-[26px] font-extrabold leading-tight tracking-[-0.02em]">
-          {t("activity.title")}
-        </h1>
-        {unread.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setReadIds(new Set(demoEvents.map((e) => e.id)))}
-            className="shrink-0 text-[13px] font-bold text-konvo-500"
-          >
-            {t("activity.markAllRead")}
-          </button>
-        )}
-      </div>
+      <h1 className="mb-4 text-[26px] font-extrabold leading-tight tracking-[-0.02em]">
+        {t("activity.title")}
+      </h1>
 
       <div className="flex flex-col">
-        {demoEvents.map((e, i) => (
-          <EventRow
-            key={e.id}
-            event={e}
-            read={!e.unread || readIds.has(e.id)}
-            last={i === demoEvents.length - 1}
-            t={t}
-            locale={locale}
-            onRead={() => setReadIds((prev) => new Set(prev).add(e.id))}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
+        {events.map((e, i) => {
+          const Icon = ICON[e.type] ?? MapPin;
+          const key = LABEL[e.type] ?? "event.tripStarted";
+          const who =
+            e.trip_members?.display_name ?? (e.payload?.name as string | undefined) ?? "";
+          const ageMs = Date.now() - Date.parse(e.created_at);
 
-function EventRow({
-  event,
-  read,
-  last,
-  t,
-  locale,
-  onRead,
-}: {
-  event: DemoEvent;
-  read: boolean;
-  last: boolean;
-  t: TFn;
-  locale: string;
-  onRead: () => void;
-}) {
-  const Icon = ICON[event.type];
-  const color = event.colorIndex ? participantColor(event.colorIndex) : undefined;
-
-  return (
-    <div
-      className={cn("flex gap-3 py-3.5", !last && "border-b border-hairline")}
-      onClick={onRead}
-    >
-      {/* Quem tem autor aparece pelo avatar; evento do grupo, por icone. Manter
-          a cor da pessoa aqui e o que liga o evento ao pino no mapa. */}
-      {event.actor && event.colorIndex ? (
-        <ParticipantAvatar
-          name={event.actor}
-          colorIndex={event.colorIndex}
-          size="md"
-          short
-        />
-      ) : (
-        <div className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-2 text-ink-50">
-          <Icon className="size-[19px]" strokeWidth={2.25} />
-        </div>
-      )}
-
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start gap-2">
-          <div className="min-w-0 flex-1">
-            <div className={cn("text-[15px] leading-snug", read ? "font-semibold" : "font-extrabold")}>
-              {t(LABEL[event.type], { name: event.actor ?? "" })}
-            </div>
-            <div className="mt-0.5 flex items-center gap-1.5 text-[13px] font-semibold text-ink-35">
-              {event.actor && event.colorIndex && (
-                <Icon className="size-3.5 shrink-0" strokeWidth={2.5} style={{ color }} />
+          return (
+            <Link
+              key={e.id}
+              to={`/konvo/${e.trip_id}`}
+              className={cn(
+                "flex items-center gap-3 py-3.5",
+                i < events.length - 1 && "border-b border-hairline",
               )}
-              <span className="truncate">
-                {event.tripName} · {formatAgo(event.agoMin * 60_000, locale)}
-              </span>
-            </div>
-          </div>
-
-          {!read && <span className="mt-1.5 size-2.5 shrink-0 rounded-full bg-konvo-500" />}
-        </div>
-
-        {event.action && (
-          <div className="mt-2.5 flex gap-2">
-            {event.action === "addStop" ? (
-              <>
-                <button
-                  type="button"
-                  className="h-9 rounded-pill bg-konvo-500 px-4 text-[13px] font-bold text-white active:bg-konvo-600"
-                >
-                  {t("activity.addForEveryone")}
-                </button>
-                <Link
-                  to={`/konvo/${event.tripId}`}
-                  className="grid h-9 place-items-center rounded-pill bg-surface-2 px-4 text-[13px] font-bold text-ink-70"
-                >
-                  {t("activity.view")}
-                </Link>
-              </>
-            ) : (
-              <Link
-                to={`/konvo/${event.tripId}`}
-                className="grid h-9 place-items-center rounded-pill bg-surface-2 px-4 text-[13px] font-bold text-ink-70"
-              >
-                {t("activity.view")}
-              </Link>
-            )}
-          </div>
-        )}
+            >
+              <div className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-2 text-ink-50">
+                <Icon className="size-[19px]" strokeWidth={2.25} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[15px] font-bold">{t(key, { name: who })}</div>
+                <div className="truncate text-[13px] font-semibold text-ink-35">
+                  {e.trips?.name ? `${e.trips.name} · ` : ""}
+                  {formatAgo(ageMs, locale)}
+                </div>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

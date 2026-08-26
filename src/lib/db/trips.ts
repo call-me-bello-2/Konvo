@@ -6,6 +6,7 @@
  */
 
 import { supabase } from "@/lib/supabase";
+import { withAuthRetry } from "@/lib/authRecovery";
 import type {
   LatLng,
   TransportType,
@@ -207,7 +208,8 @@ export interface CreateTripInput {
 }
 
 export async function createTrip(input: CreateTripInput): Promise<Trip> {
-  const { data, error } = await supabase.rpc("create_trip", {
+  const { data, error } = await withAuthRetry(async () =>
+    supabase.rpc("create_trip", {
     p_name: input.name,
     p_mode: input.mode,
     p_destination_name: input.destination.name,
@@ -221,7 +223,8 @@ export async function createTrip(input: CreateTripInput): Promise<Trip> {
     p_route_distance_m: input.route?.distanceM ?? null,
     p_route_duration_s: input.route?.durationS ?? null,
     p_starts_at: input.startsAt,
-  });
+    }),
+  );
   if (error) throw error;
   return toTrip((Array.isArray(data) ? data[0] : data) as TripRow);
 }
@@ -234,13 +237,15 @@ export async function joinTrip(input: {
   /** id do membro que conduz, quando a pessoa entra como passageiro */
   ridingWith?: string | null;
 }): Promise<string> {
-  const { data, error } = await supabase.rpc("join_trip", {
+  const { data, error } = await withAuthRetry(async () =>
+    supabase.rpc("join_trip", {
     p_code: input.code,
     p_display_name: input.displayName,
     p_transport: input.transport,
     p_avatar_url: input.avatarUrl ?? null,
     p_riding_with: input.ridingWith ?? null,
-  });
+    }),
+  );
   if (error) throw error;
   return data as string;
 }

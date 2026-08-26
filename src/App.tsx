@@ -5,6 +5,7 @@ import { BottomNavigation } from "./components/BottomNavigation";
 import { KonvoHeader } from "./components/KonvoHeader";
 import { NewKonvoSheet } from "./components/NewKonvoSheet";
 import { SetupNotice } from "./components/SetupNotice";
+import { useMyTrips } from "./hooks/useMyTrips";
 import { HomePage } from "./routes/HomePage";
 import { TripsPage } from "./routes/TripsPage";
 import { ActivityPage } from "./routes/ActivityPage";
@@ -12,7 +13,6 @@ import { ProfilePage } from "./routes/ProfilePage";
 import { NewKonvoPage } from "./routes/NewKonvoPage";
 import { JoinKonvoPage } from "./routes/JoinKonvoPage";
 import { LiveKonvoPage } from "./routes/LiveKonvoPage";
-import { demoEvents, demoTrips } from "./data/demo";
 
 /**
  * Casca do app.
@@ -32,16 +32,15 @@ export function App() {
 
   // O + e contextual: com uma viagem em andamento ele age sobre ELA, em vez de
   // oferecer criar outra — que quase nunca e a intencao no meio da estrada.
-  const activeTrip = demoTrips.find((t) => t.status === "active") ?? null;
-
-  // O sino e a aba Activity sao a mesma caixa de entrada, entao o badge conta
-  // exatamente o que a aba mostra como nao-lido.
-  const unreadCount = demoEvents.filter((e) => e.unread).length;
+  const { active } = useMyTrips();
+  const activeTrip = active[0]
+    ? { id: active[0].trip.id, name: active[0].trip.name }
+    : null;
 
   return (
     <div className="flex h-full flex-col bg-canvas">
       {chrome && (
-        <KonvoHeader unreadCount={unreadCount} onNewKonvo={() => setNewOpen(true)} />
+        <KonvoHeader onNewKonvo={() => setNewOpen(true)} />
       )}
       {chrome && <SetupNotice />}
 
@@ -74,7 +73,7 @@ export function App() {
       <NewKonvoSheet
         open={newOpen}
         onOpenChange={setNewOpen}
-        activeTrip={activeTrip && { id: activeTrip.id, name: activeTrip.name }}
+        activeTrip={activeTrip}
       />
     </div>
   );
