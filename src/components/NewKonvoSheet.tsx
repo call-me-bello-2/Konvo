@@ -40,13 +40,13 @@ export function NewKonvoSheet({ open, onOpenChange, activeTrip }: Props) {
             icon={MapPin}
             title={t("new.addStop")}
             copy={t("new.addStopCopy")}
-            onClick={() => go(`/konvo/${activeTrip.id}/stop`)}
+            onClick={() => go(`/konvo/${activeTrip.id}`)}
           />
           <ActionRow
             icon={UserPlus}
             title={t("new.invite")}
             copy={t("new.inviteCopy")}
-            onClick={() => go(`/konvo/${activeTrip.id}/invite`)}
+            onClick={() => go(`/konvo/${activeTrip.id}`)}
           />
         </div>
 

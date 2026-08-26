@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { I18nProvider } from "./i18n";
 import { ThemeProvider } from "./theme";
+import { SessionProvider } from "./session";
 import "./styles.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -13,7 +14,9 @@ createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <ThemeProvider>
         <I18nProvider>
-          <App />
+          <SessionProvider>
+            <App />
+          </SessionProvider>
         </I18nProvider>
       </ThemeProvider>
     </BrowserRouter>

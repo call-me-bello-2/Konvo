@@ -4,10 +4,14 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { BottomNavigation } from "./components/BottomNavigation";
 import { KonvoHeader } from "./components/KonvoHeader";
 import { NewKonvoSheet } from "./components/NewKonvoSheet";
+import { SetupNotice } from "./components/SetupNotice";
 import { HomePage } from "./routes/HomePage";
 import { TripsPage } from "./routes/TripsPage";
 import { ActivityPage } from "./routes/ActivityPage";
 import { ProfilePage } from "./routes/ProfilePage";
+import { NewKonvoPage } from "./routes/NewKonvoPage";
+import { JoinKonvoPage } from "./routes/JoinKonvoPage";
+import { LiveKonvoPage } from "./routes/LiveKonvoPage";
 import { demoEvents, demoTrips, demoUser } from "./data/demo";
 
 /**
@@ -37,6 +41,7 @@ export function App() {
   return (
     <div className="flex h-full flex-col bg-canvas">
       {chrome && <KonvoHeader user={demoUser} unreadCount={unreadCount} />}
+      <SetupNotice />
 
       <main className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <Routes>
@@ -44,6 +49,9 @@ export function App() {
           <Route path="/trips" element={<TripsPage />} />
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/you" element={<ProfilePage />} />
+          <Route path="/new" element={<NewKonvoPage />} />
+          <Route path="/join/:code" element={<JoinKonvoPage />} />
+          <Route path="/konvo/:tripId" element={<LiveKonvoPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
