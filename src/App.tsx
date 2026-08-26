@@ -12,6 +12,7 @@ import { ActivityPage } from "./routes/ActivityPage";
 import { ProfilePage } from "./routes/ProfilePage";
 import { NewKonvoPage } from "./routes/NewKonvoPage";
 import { JoinKonvoPage } from "./routes/JoinKonvoPage";
+import { JoinByCodePage } from "./routes/JoinByCodePage";
 import { LiveKonvoPage } from "./routes/LiveKonvoPage";
 
 /**
@@ -22,7 +23,7 @@ import { LiveKonvoPage } from "./routes/LiveKonvoPage";
  * e uma barra de abas ali so tiraria espaco do que importa.
  */
 
-const FULLSCREEN = ["/konvo/", "/meet/", "/join/", "/new", "/demo"];
+const FULLSCREEN = ["/konvo/", "/meet/", "/join", "/new", "/demo"];
 
 export function App() {
   const { pathname } = useLocation();
@@ -60,6 +61,7 @@ export function App() {
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/you" element={<ProfilePage />} />
           <Route path="/new" element={<NewKonvoPage />} />
+          <Route path="/join" element={<JoinByCodePage />} />
           <Route path="/join/:code" element={<JoinKonvoPage />} />
           <Route path="/konvo/:tripId" element={<LiveKonvoPage />} />
           {/* Demonstracao: carros simulados na rota real, sem precisar de banco. */}

@@ -29,7 +29,15 @@ export function NewKonvoPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Place[]>([]);
   const [searching, setSearching] = useState(false);
-  const [dest, setDest] = useState<Place | null>(null);
+  // Destino pode vir pronto dos sugeridos da Home — nesse caso a tela abre
+  // com ele escolhido e a pessoa so confirma.
+  const [dest, setDest] = useState<Place | null>(() => {
+    const name = params.get("dest");
+    const lat = Number(params.get("lat"));
+    const lng = Number(params.get("lng"));
+    if (!name || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { name, context: "", lat, lng };
+  });
   const [name, setName] = useState(displayName);
   const [transport, setTransport] = useState<TransportType>("car");
   const [origin, setOrigin] = useState<LatLng | null>(null);

@@ -12,9 +12,8 @@ import { cn } from "@/lib/utils";
  * teto: cada coisa a mais aqui compete com o wordmark e a barra deixa de ser
  * identidade para virar painel de controle.
  *
- * O avatar saiu de proposito. Ele nao fazia nada que a aba "Você" ja nao faca,
- * e ocupava o mesmo canto que o sino — dois alvos colados, um deles inutil.
- * O `+` no lugar dele vale mais: criar viagem e a acao mais frequente do app.
+ * Sem avatar de proposito — ele nao fazia nada que a aba "Você" ja nao faca, e
+ * ocupava o mesmo canto que o sino: dois alvos colados, um deles inutil.
  */
 
 interface Props {
@@ -50,11 +49,7 @@ export function KonvoHeader({ unreadCount = 0, onNewKonvo, className }: Props) {
 
         {/* O wordmark fica centrado na TELA, nao no espaco que sobra — assim
             nao desliza quando o badge de notificacao aparece ou some. */}
-        <Link
-          to="/"
-          aria-label="Konvo"
-          className="absolute left-1/2 -translate-x-1/2 py-2"
-        >
+        <Link to="/" aria-label="Konvo" className="absolute left-1/2 -translate-x-1/2 py-2">
           <img
             src={wordmark}
             alt="Konvo"
@@ -66,15 +61,12 @@ export function KonvoHeader({ unreadCount = 0, onNewKonvo, className }: Props) {
 
         <Link
           to="/activity"
-          aria-label={t("nav.activity")}
+          aria-label={t("nav.inbox")}
           className="relative ml-auto grid size-10 shrink-0 place-items-center rounded-full active:bg-surface-2"
         >
           <Bell className="size-[22px] text-ink" strokeWidth={2} />
           {unreadCount > 0 && (
-            <span
-              className="absolute right-1.5 top-1.5 size-2.5 rounded-full bg-split ring-2 ring-canvas"
-              aria-label={`${unreadCount}`}
-            />
+            <span className="absolute right-1.5 top-1.5 size-2.5 rounded-full bg-split ring-2 ring-canvas" />
           )}
         </Link>
       </div>

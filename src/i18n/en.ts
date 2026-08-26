@@ -221,6 +221,25 @@ export const en = {
   "live.cameraFollow": "Follow",
   "transport.ownWayNote": "You follow your own way — Konvo shows your distance and arrival time, and won't say the group split because of you.",
   "transport.more": "More options",
+
+  // --- home redesenhada ---
+  "brand.tagline": "Travel together.",
+  "nav.inbox": "Inbox",
+  "home.eyebrow": "Let's start a new Konvo",
+  "home.headingA": "Where are we ",
+  "home.headingB": "going?",
+  "home.haveInvite": "Have an invite?",
+  "home.joinKonvo": "Join Konvo",
+  "home.activeKonvo": "Active Konvo",
+  "home.viewLive": "View live",
+  "home.seeAll": "See all",
+  "home.remaining": "Remaining",
+  "home.eta": "ETA",
+  "home.everyoneWithin": "Everyone within {distance}",
+  "home.popular": "Popular right now",
+  "join.enterCode": "Enter invite code",
+  "join.codeHint": "Six letters, like K7F2QP",
+  "join.go": "Continue",
 } as const;
 
 export type TranslationKey = keyof typeof en;

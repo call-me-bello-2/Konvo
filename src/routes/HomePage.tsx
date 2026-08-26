@@ -1,25 +1,33 @@
-import { ChevronRight, Search } from "lucide-react";
+import { ArrowRight, ChevronRight, MapPin, Search, Users } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { ChevronMotif } from "@/components/ChevronMotif";
-import { TripCard } from "@/components/TripCard";
+import { RoutePreview } from "@/components/RoutePreview";
 import { useMyTrips, type TripSummary } from "@/hooks/useMyTrips";
 import { useI18n, useT } from "@/i18n";
-import { formatDistance } from "@/lib/konvo/format";
+import { POPULAR, type PopularDestination } from "@/data/popular";
+import { formatDistance, formatDuration } from "@/lib/konvo/format";
+import { routeFromPolyline, straightLineRoute } from "@/lib/konvo/route";
 
 /**
  * Home (brief §07).
  *
- * Quando ha um Konvo em andamento, ele domina a tela — e a unica coisa que
- * importa naquele momento. Sem viagem nenhuma, a tela inteira vira o convite
- * para comecar uma, em vez de uma lista vazia com cara de erro.
+ * A ordem da tela responde as perguntas na sequencia em que elas aparecem:
+ *   1. para onde vamos?      — criar, que e o que 90% das aberturas quer
+ *   2. e se me convidaram?   — entrar, discreto mas sempre visivel
+ *   3. como vamos?           — os dois modos do produto (§08)
+ *   4. e a viagem de agora?  — o Konvo em andamento, quando existe
+ *   5. e as proximas?
+ *
+ * O Konvo ativo nao fica no topo de proposito: quem ja esta viajando abre o
+ * app pelo mapa, nao por aqui.
  */
 
 export function HomePage() {
   const t = useT();
   const { locale } = useI18n();
   const navigate = useNavigate();
-  const { active, upcoming, past, loading, error } = useMyTrips();
+  const { active, upcoming, loading } = useMyTrips();
 
   if (loading) {
     return (
@@ -29,137 +37,278 @@ export function HomePage() {
     );
   }
 
-  const hasAny = active.length + upcoming.length + past.length > 0;
-
-  // --- primeiro uso ---------------------------------------------------------
-  if (!hasAny) {
-    return (
-      <div className="grid h-full place-items-center px-8 text-center">
-        <div className="w-full max-w-xs">
-          <ChevronMotif className="mx-auto mb-6" />
-          <h1 className="text-[26px] font-extrabold leading-tight tracking-[-0.02em]">
-            {t("empty.home.tagline")}
-          </h1>
-          <p className="mt-2 text-[15px] font-semibold leading-snug text-ink-50">
-            {t("empty.home.copy")}
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate("/new?mode=together")}
-            className="mt-7 h-14 w-full rounded-pill bg-konvo-500 text-[16px] font-extrabold text-white active:bg-konvo-600"
-          >
-            {t("empty.home.cta")}
-          </button>
-          {error && (
-            <p className="mt-4 text-[12px] font-semibold text-split-ink">{error}</p>
-          )}
-        </div>
-      </div>
+  const startWith = (d: PopularDestination) =>
+    navigate(
+      `/new?mode=together&dest=${encodeURIComponent(d.name)}&lat=${d.lat}&lng=${d.lng}`,
     );
-  }
 
   return (
-    <div className="px-4 pb-6 pt-3">
-      <h1 className="text-[26px] font-extrabold leading-tight tracking-[-0.02em]">
-        {t("home.prompt")}
+    <div className="px-4 pb-8">
+      {/* --- 1. para onde vamos ------------------------------------------- */}
+      <div className="flex items-center gap-1.5 pt-1 text-[14px] font-bold text-ink-50">
+        <MapPin className="size-[15px] text-konvo-500" strokeWidth={2.5} />
+        {t("home.eyebrow")}
+      </div>
+
+      <h1 className="mt-1.5 text-[38px] font-extrabold leading-[1.05] tracking-[-0.03em]">
+        {t("home.headingA")}
+        <span className="text-konvo-500">{t("home.headingB")}</span>
       </h1>
 
       <button
         type="button"
         onClick={() => navigate("/new?mode=together")}
-        className="mt-3 flex w-full items-center gap-3 rounded-card border border-hairline bg-surface px-4 text-left shadow-card active:bg-surface-2"
-        style={{ height: 52 }}
+        className="mt-5 flex w-full items-center gap-3 rounded-pill border border-hairline bg-surface py-2 pl-5 pr-2 text-left shadow-card active:bg-surface-2"
       >
-        <Search className="size-5 shrink-0 text-ink-35" strokeWidth={2.5} />
-        <span className="font-semibold text-ink-35">{t("home.addDestination")}</span>
+        <Search className="size-[19px] shrink-0 text-ink-35" strokeWidth={2.5} />
+        <span className="min-w-0 flex-1 truncate text-[16px] font-semibold text-ink-35">
+          {t("home.addDestination")}
+        </span>
+        <span className="grid size-11 shrink-0 place-items-center rounded-full bg-konvo-500 text-white">
+          <ArrowRight className="size-5" strokeWidth={2.75} />
+        </span>
       </button>
 
+      {/* --- 2. recebi um convite ----------------------------------------- */}
+      <div className="mt-3.5 flex items-center gap-2 text-[14px]">
+        <span className="font-semibold text-ink-50">{t("home.haveInvite")}</span>
+        <Link to="/join" className="flex items-center gap-0.5 font-bold text-konvo-500">
+          {t("home.joinKonvo")}
+          <ChevronRight className="size-4" strokeWidth={2.75} />
+        </Link>
+      </div>
+
+      {/* --- 3. os dois modos (§08) ---------------------------------------- */}
+      <div className="mt-5 grid grid-cols-2 gap-2.5">
+        <ModeCard
+          tone="konvo"
+          title={t("new.together")}
+          copy={t("new.togetherCopy")}
+          onClick={() => navigate("/new?mode=together")}
+        />
+        <ModeCard
+          tone="together"
+          title={t("new.meet")}
+          copy={t("new.meetCopy")}
+          onClick={() => navigate("/new?mode=meet")}
+        />
+      </div>
+
+      {/* --- 4. o Konvo de agora ------------------------------------------- */}
       {active.length > 0 && (
-        <div className="mt-5 flex flex-col gap-2">
-          {active.map((s) => (
-            <ActiveCard key={s.trip.id} summary={s} />
-          ))}
-        </div>
+        <>
+          <SectionHead
+            title={t("home.activeKonvo")}
+            dot
+            action={{ label: t("home.viewLive"), to: `/konvo/${active[0].trip.id}` }}
+          />
+          <div className="flex flex-col gap-2">
+            {active.map((s) => (
+              <ActiveCard key={s.trip.id} summary={s} locale={locale} />
+            ))}
+          </div>
+        </>
       )}
 
+      {/* --- 5. as proximas ------------------------------------------------ */}
       {upcoming.length > 0 && (
-        <Section title={t("home.upcoming")}>
-          {upcoming.map((s) => (
-            <TripCard
-              key={s.trip.id}
-              to={`/trips/${s.trip.id}`}
-              name={s.trip.name}
-              detail={t("count.people", { count: s.peopleCount })}
-            />
-          ))}
-        </Section>
+        <>
+          <SectionHead title={t("home.upcoming")} action={{ label: t("home.seeAll"), to: "/trips" }} />
+          <div className="flex flex-col gap-2">
+            {upcoming.map((s) => (
+              <Link
+                key={s.trip.id}
+                to={`/trips/${s.trip.id}`}
+                className="flex items-center gap-3 rounded-card border border-hairline bg-surface p-3 shadow-card active:bg-surface-2"
+              >
+                <div
+                  className="grid size-14 shrink-0 place-items-center rounded-[12px] text-white"
+                  style={{ background: "linear-gradient(135deg,#0043fd,#7b61ff)" }}
+                >
+                  <MapPin className="size-6" strokeWidth={2.25} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[16px] font-extrabold leading-tight">
+                    {s.trip.name}
+                  </div>
+                  <div className="mt-1 flex items-center gap-1.5 text-[13px] font-semibold text-ink-50">
+                    <Users className="size-[14px]" strokeWidth={2.5} />
+                    {t("count.people", { count: s.peopleCount })}
+                  </div>
+                </div>
+                <ChevronRight className="size-5 shrink-0 text-ink-35" strokeWidth={2.5} />
+              </Link>
+            ))}
+          </div>
+        </>
       )}
 
-      {past.length > 0 && (
-        <Section title={t("home.recent")}>
-          {past.map((s) => (
-            <TripCard
-              key={s.trip.id}
-              to={`/trips/${s.trip.id}`}
-              name={s.trip.name}
-              detail={`${t("count.people", { count: s.peopleCount })}${
-                s.trip.routeDistanceM
-                  ? ` · ${formatDistance(s.trip.routeDistanceM, "km", locale)}`
-                  : ""
-              }`}
-              variant="past"
-            />
-          ))}
-        </Section>
-      )}
+      {/* --- destinos sugeridos -------------------------------------------- */}
+      <SectionHead title={t("home.popular")} />
+      <div className="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1">
+        {POPULAR.map((d) => (
+          <button
+            key={d.name}
+            type="button"
+            onClick={() => startWith(d)}
+            className="w-[132px] shrink-0 overflow-hidden rounded-card border border-hairline bg-surface text-left shadow-card active:opacity-80"
+          >
+            <div className="h-[76px] w-full" style={{ background: d.tint }} />
+            <div className="px-3 py-2.5">
+              <div className="truncate text-[14px] font-extrabold leading-tight">{d.name}</div>
+              <div className="mt-0.5 truncate text-[12px] font-semibold text-ink-35">
+                {d.context}
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function ModeCard({
+  title,
+  copy,
+  onClick,
+  tone,
+}: {
+  title: string;
+  copy: string;
+  onClick: () => void;
+  tone: "konvo" | "together";
+}) {
+  const isKonvo = tone === "konvo";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        "flex flex-col rounded-card border p-3.5 text-left active:opacity-80 " +
+        (isKonvo ? "border-konvo-100 bg-konvo-50" : "border-hairline bg-together-soft")
+      }
+    >
+      <span
+        className={
+          "grid size-10 place-items-center rounded-full bg-surface " +
+          (isKonvo ? "text-konvo-500" : "text-together-ink")
+        }
+      >
+        {isKonvo ? (
+          <svg width="21" height="21" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M5 11l1.5-4A2 2 0 0 1 8.4 5.7h7.2a2 2 0 0 1 1.9 1.3L19 11M4 11h16a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1Zm2.5 5v1.5m11-1.5v1.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.9}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : (
+          <MapPin className="size-[21px]" strokeWidth={2.25} />
+        )}
+      </span>
+      <span className="mt-2.5 text-[15px] font-extrabold leading-tight">{title}</span>
+      <span className="mt-1 text-[12.5px] font-semibold leading-snug text-ink-50">{copy}</span>
+    </button>
   );
 }
 
 /**
  * O Konvo em andamento.
  *
- * Nao mostra estado do grupo nem ETA aqui de proposito: isso exigiria abrir a
- * conexao ao vivo da viagem so para desenhar um card. O estado de verdade esta
- * a um toque, na tela do Live.
+ * Mostra a silhueta da rota, nao um mapa com tiles: em 90 px de altura ninguem
+ * le nome de rua, e carregar o mapa aqui custaria bateria e dados numa tela
+ * que a pessoa so passa o olho. O mapa de verdade esta a um toque.
  */
-function ActiveCard({ summary }: { summary: TripSummary }) {
+function ActiveCard({ summary, locale }: { summary: TripSummary; locale: string }) {
   const t = useT();
   const { trip, peopleCount, vehicleCount } = summary;
+
+  const route = trip.routePolyline
+    ? routeFromPolyline(trip.routePolyline)
+    : trip.origin
+      ? straightLineRoute(trip.origin, trip.destination)
+      : null;
 
   return (
     <Link
       to={`/konvo/${trip.id}`}
-      className="block overflow-hidden rounded-card border border-konvo-200 bg-surface shadow-card"
+      className="block overflow-hidden rounded-card border border-hairline bg-surface shadow-card"
     >
-      <div className="px-4 pb-4 pt-4">
-        <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-konvo-500">
-          {t("home.inProgress")}
+      <div className="flex gap-3 p-4 pb-3">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[19px] font-extrabold leading-tight tracking-[-0.01em]">
+            {trip.name}
+          </div>
+          <div className="mt-1.5 flex items-center gap-1.5 text-[13px] font-bold text-together-ink">
+            <span className="size-2 rounded-full bg-together" />
+            {t("count.people", { count: peopleCount })} ·{" "}
+            {t("count.vehicles", { count: vehicleCount })}
+          </div>
         </div>
-        <div className="truncate text-[22px] font-extrabold leading-tight tracking-[-0.01em]">
-          {trip.name}
-        </div>
-        <div className="mt-0.5 text-[13px] font-semibold text-ink-50">
-          {t("count.people", { count: peopleCount })} ·{" "}
-          {t("count.vehicles", { count: vehicleCount })}
-        </div>
+
+        {route && (
+          <div className="w-[104px] shrink-0 rounded-[10px] bg-surface-2/60 py-1">
+            <RoutePreview route={route} height={54} aspect={1.9} />
+          </div>
+        )}
       </div>
 
-      <div className="flex h-12 items-center justify-center gap-1 border-t border-hairline font-bold text-konvo-500">
-        {t("home.openKonvo")}
-        <ChevronRight className="size-[18px]" strokeWidth={2.75} />
+      <div className="flex items-stretch gap-3 border-t border-hairline px-4 py-3">
+        {trip.routeDistanceM != null && (
+          <Stat label={t("home.remaining")} value={formatDistance(trip.routeDistanceM, "km", locale)} />
+        )}
+        {trip.routeDurationS != null && (
+          <Stat label={t("home.eta")} value={formatDuration(trip.routeDurationS, locale)} />
+        )}
+        <span className="ml-auto flex shrink-0 items-center gap-1 self-center rounded-pill bg-konvo-500 px-4 py-2.5 text-[14px] font-extrabold text-white">
+          {t("home.openKonvo")}
+          <ChevronRight className="size-[17px]" strokeWidth={2.75} />
+        </span>
       </div>
     </Link>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <section className="mt-6">
-      <h2 className="mb-2 text-[13px] font-extrabold uppercase tracking-[0.07em] text-ink-35">
+    <div className="min-w-0">
+      <div className="tnum truncate text-[15px] font-extrabold leading-tight">{value}</div>
+      <div className="truncate text-[11px] font-bold uppercase tracking-[0.05em] text-ink-35">
+        {label}
+      </div>
+    </div>
+  );
+}
+
+function SectionHead({
+  title,
+  action,
+  dot,
+}: {
+  title: string;
+  action?: { label: string; to: string };
+  dot?: boolean;
+}) {
+  return (
+    <div className="mb-2 mt-7 flex items-center gap-2">
+      <h2 className="text-[13px] font-extrabold uppercase tracking-[0.07em] text-ink-35">
         {title}
       </h2>
-      <div className="flex flex-col gap-2">{children}</div>
-    </section>
+      {dot && <span className="size-2 rounded-full bg-together" />}
+      {action && (
+        <Link
+          to={action.to}
+          className="ml-auto flex items-center gap-0.5 text-[13px] font-bold text-konvo-500"
+        >
+          {action.label}
+          <ChevronRight className="size-4" strokeWidth={2.75} />
+        </Link>
+      )}
+    </div>
   );
 }

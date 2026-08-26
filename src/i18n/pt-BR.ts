@@ -222,4 +222,23 @@ export const ptBR: Record<TranslationKey, string> = {
   "live.cameraFollow": "Seguir",
   "transport.ownWayNote": "Você segue caminho próprio — o Konvo mostra sua distância e horário de chegada, e não vai dizer que o grupo se dividiu por sua causa.",
   "transport.more": "Mais opções",
+
+  // --- home redesenhada ---
+  "brand.tagline": "Viajem juntos.",
+  "nav.inbox": "Conversa",
+  "home.eyebrow": "Vamos começar um Konvo",
+  "home.headingA": "Para onde ",
+  "home.headingB": "vamos?",
+  "home.haveInvite": "Recebeu um convite?",
+  "home.joinKonvo": "Entrar num Konvo",
+  "home.activeKonvo": "Konvo em andamento",
+  "home.viewLive": "Ver ao vivo",
+  "home.seeAll": "Ver todas",
+  "home.remaining": "Faltam",
+  "home.eta": "Chegada",
+  "home.everyoneWithin": "Todos dentro de {distance}",
+  "home.popular": "Procurados agora",
+  "join.enterCode": "Digite o código do convite",
+  "join.codeHint": "Seis letras, tipo K7F2QP",
+  "join.go": "Continuar",
 };
