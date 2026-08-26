@@ -241,4 +241,21 @@ export const ptBR: Record<TranslationKey, string> = {
   "join.enterCode": "Digite o código do convite",
   "join.codeHint": "Seis letras, tipo K7F2QP",
   "join.go": "Continuar",
+
+  // --- busca inline, notificacoes, chegada ---
+  "home.typeToSearch": "Digite uma cidade, endereço ou lugar",
+  "notif.title": "Notificações",
+  "notif.empty": "Nada de novo",
+  "notif.emptyCopy": "Os eventos do grupo aparecem aqui durante a viagem.",
+  "you.photo": "Foto",
+  "you.phone": "Telefone",
+  "you.phoneCopy": "Pro grupo te ligar se o app falhar",
+  "trips.emptyIdea": "Procurados agora",
+  "inbox.emptyInvite": "Chame sua gente",
+  "inbox.emptyInviteCopy": "Um Konvo só faz sentido quando tem mais de um.",
+  "inbox.startKonvo": "Começar um Konvo",
+  "arrive.title": "Você chegou",
+  "arrive.subtitle": "{name}",
+  "arrive.together": "Juntos em {percent}% da viagem",
+  "arrive.done": "Pronto",
 };

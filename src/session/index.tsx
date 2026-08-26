@@ -15,6 +15,8 @@ import { ensureSession, supabase } from "@/lib/supabase";
  */
 
 const NAME_KEY = "konvo.displayName";
+const PHONE_KEY = "konvo.phone";
+const AVATAR_KEY = "konvo.avatar";
 
 interface SessionValue {
   userId: string | null;
@@ -24,16 +26,34 @@ interface SessionValue {
   error: string | null;
   displayName: string;
   setDisplayName: (n: string) => void;
+  /**
+   * Telefone. E o plano B do produto: se o app travar, ficar sem sinal ou a
+   * bateria acabar, o grupo ainda precisa conseguir falar com a pessoa.
+   */
+  phone: string;
+  setPhone: (p: string) => void;
+  /** foto reduzida, guardada como data URL */
+  avatarUrl: string | null;
+  setAvatarUrl: (a: string | null) => void;
   retry: () => void;
 }
 
 const SessionContext = createContext<SessionValue | null>(null);
 
-function readName(): string {
+function read(key: string): string {
   try {
-    return localStorage.getItem(NAME_KEY) ?? "";
+    return localStorage.getItem(key) ?? "";
   } catch {
     return "";
+  }
+}
+
+function write(key: string, value: string) {
+  try {
+    if (value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  } catch {
+    // sem persistencia a pessoa so digita de novo; nao pode quebrar o app
   }
 }
 
@@ -41,7 +61,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [displayName, setName] = useState(readName);
+  const [displayName, setName] = useState(() => read(NAME_KEY));
+  const [phone, setPhoneState] = useState(() => read(PHONE_KEY));
+  const [avatarUrl, setAvatarState] = useState<string | null>(
+    () => read(AVATAR_KEY) || null,
+  );
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -76,11 +100,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const setDisplayName = (n: string) => {
     setName(n);
-    try {
-      localStorage.setItem(NAME_KEY, n);
-    } catch {
-      // sem persistencia a pessoa so digita de novo; nao pode quebrar o app
-    }
+    write(NAME_KEY, n);
+  };
+
+  const setPhone = (p: string) => {
+    setPhoneState(p);
+    write(PHONE_KEY, p);
+  };
+
+  const setAvatarUrl = (a: string | null) => {
+    setAvatarState(a);
+    write(AVATAR_KEY, a ?? "");
   };
 
   const value = useMemo(
@@ -90,9 +120,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       error,
       displayName,
       setDisplayName,
+      phone,
+      setPhone,
+      avatarUrl,
+      setAvatarUrl,
       retry: () => setAttempt((a) => a + 1),
     }),
-    [userId, loading, error, displayName],
+    [userId, loading, error, displayName, phone, avatarUrl],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

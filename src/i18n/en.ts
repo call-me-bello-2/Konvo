@@ -240,6 +240,23 @@ export const en = {
   "join.enterCode": "Enter invite code",
   "join.codeHint": "Six letters, like K7F2QP",
   "join.go": "Continue",
+
+  // --- busca inline, notificacoes, chegada ---
+  "home.typeToSearch": "Type a city, address or place",
+  "notif.title": "Notifications",
+  "notif.empty": "Nothing new",
+  "notif.emptyCopy": "Group events show up here during a trip.",
+  "you.photo": "Photo",
+  "you.phone": "Phone",
+  "you.phoneCopy": "So the group can call you if the app fails",
+  "trips.emptyIdea": "Popular right now",
+  "inbox.emptyInvite": "Invite your people",
+  "inbox.emptyInviteCopy": "A Konvo starts making sense when there's more than one of you.",
+  "inbox.startKonvo": "Start a Konvo",
+  "arrive.title": "You arrived",
+  "arrive.subtitle": "{name}",
+  "arrive.together": "Together for {percent}% of the trip",
+  "arrive.done": "Done",
 } as const;
 
 export type TranslationKey = keyof typeof en;

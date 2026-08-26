@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronRight, LogOut, Phone } from "lucide-react";
 
-import { ParticipantAvatar } from "@/components/ParticipantAvatar";
+import { AvatarPicker } from "@/components/AvatarPicker";
 import { useI18n, useT } from "@/i18n";
 import { useSession } from "@/session";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,8 @@ export function ProfilePage() {
   const { locale, setLocale } = useI18n();
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
 
-  const { displayName, setDisplayName } = useSession();
+  const { displayName, setDisplayName, phone, setPhone, avatarUrl, setAvatarUrl } =
+    useSession();
 
   // Preferencias ficam no aparelho: sao de quem esta segurando o celular, nao
   // da conta. Guardar no banco exigiria conta de verdade e nao mudaria nada.
@@ -39,7 +40,12 @@ export function ProfilePage() {
       </h1>
 
       <div className="mb-6 flex items-center gap-3.5">
-        <ParticipantAvatar name={displayName || "?"} colorIndex={1} size="lg" />
+        <AvatarPicker
+          name={displayName}
+          colorIndex={1}
+          value={avatarUrl}
+          onChange={setAvatarUrl}
+        />
         <input
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
@@ -48,7 +54,27 @@ export function ProfilePage() {
         />
       </div>
 
-      {/* --- preferencias que a viagem usa ---------------------------------- */}
+      {/* Telefone e o plano B do produto inteiro: se o app travar, ficar sem
+          sinal ou a bateria acabar, o grupo ainda consegue falar com a pessoa. */}
+      <Group>
+        <div className="px-4 py-3">
+          <div className="text-[15px] font-bold">{t("you.phone")}</div>
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            type="tel"
+            inputMode="tel"
+            placeholder="+55 11 99999-0000"
+            className="mt-1 w-full bg-transparent text-[15px] font-semibold outline-none placeholder:text-ink-35"
+          />
+          <p className="mt-1 text-[13px] font-semibold leading-snug text-ink-50">
+            {t("you.phoneCopy")}
+          </p>
+        </div>
+      </Group>
+
+      <div className="h-4" />
+
       <Group>
         {/* Alimenta o §17: o Konvo nao navega, so abre o app que a pessoa usa. */}
         <SegmentRow

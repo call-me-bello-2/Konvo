@@ -265,3 +265,30 @@ export async function completeTrip(tripId: string): Promise<void> {
     .eq("id", tripId);
   if (error) throw error;
 }
+
+/**
+ * Grava foto e telefone da pessoa na viagem.
+ *
+ * Roda depois de criar ou entrar, e nao dentro da RPC, por um motivo pratico:
+ * se falhar, a pessoa JA esta na viagem. Perder a foto e um detalhe; perder a
+ * entrada seria o app inteiro.
+ */
+export async function updateMyMemberProfile(
+  tripId: string,
+  data: { phone?: string | null; avatarUrl?: string | null },
+): Promise<void> {
+  const { data: session } = await supabase.auth.getUser();
+  const userId = session.user?.id;
+  if (!userId) return;
+
+  const patch: Record<string, string | null> = {};
+  if (data.phone !== undefined) patch.phone = data.phone || null;
+  if (data.avatarUrl !== undefined) patch.avatar_url = data.avatarUrl || null;
+  if (Object.keys(patch).length === 0) return;
+
+  await supabase
+    .from("trip_members")
+    .update(patch)
+    .eq("trip_id", tripId)
+    .eq("user_id", userId);
+}

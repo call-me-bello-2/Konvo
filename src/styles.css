@@ -183,7 +183,56 @@
   }
 }
 
+/* ==========================================================================
+   Movimento
+
+   Contido de proposito (brief §05): a animacao existe para explicar de onde a
+   coisa veio, nunca para chamar atencao. Duracoes curtas e curva de saida
+   rapida — num app usado em movimento, animacao lenta vira espera.
+   ========================================================================== */
+
+@keyframes konvo-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes konvo-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Chegada: o unico momento do app que merece comemorar. */
+@keyframes konvo-pop {
+  0%   { opacity: 0; transform: scale(0.72); }
+  55%  { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes konvo-chevron {
+  0%, 100% { opacity: 0.25; transform: translateX(0); }
+  50%      { opacity: 1;    transform: translateX(3px); }
+}
+
 @layer utilities {
+  .animate-rise {
+    animation: konvo-rise 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .animate-fade {
+    animation: konvo-fade 0.2s ease-out both;
+  }
+  .animate-pop {
+    animation: konvo-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Quem pediu menos movimento no sistema recebe menos movimento. */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-rise,
+    .animate-fade,
+    .animate-pop {
+      animation: konvo-fade 0.01s both;
+    }
+  }
+
   .safe-top {
     padding-top: env(safe-area-inset-top);
   }

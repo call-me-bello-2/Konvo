@@ -19,10 +19,12 @@ import { cn } from "@/lib/utils";
 interface Props {
   unreadCount?: number;
   onNewKonvo?: () => void;
+  /** abre as notificacoes em folha, sem trocar de tela */
+  onNotifications?: () => void;
   className?: string;
 }
 
-export function KonvoHeader({ unreadCount = 0, onNewKonvo, className }: Props) {
+export function KonvoHeader({ unreadCount = 0, onNewKonvo, onNotifications, className }: Props) {
   const t = useT();
   const { resolved } = useTheme();
 
@@ -33,7 +35,9 @@ export function KonvoHeader({ unreadCount = 0, onNewKonvo, className }: Props) {
   return (
     <header
       className={cn(
-        "safe-top relative z-20 shrink-0 border-b border-hairline bg-canvas/85 backdrop-blur-sm",
+        // Sem borda e na mesma cor da tela: a barra deixa de ser um bloco separado
+        // e o conteudo parece continuar por baixo dela.
+        "safe-top relative z-20 shrink-0 bg-canvas",
         className,
       )}
     >
@@ -59,16 +63,17 @@ export function KonvoHeader({ unreadCount = 0, onNewKonvo, className }: Props) {
           />
         </Link>
 
-        <Link
-          to="/activity"
-          aria-label={t("nav.inbox")}
+        <button
+          type="button"
+          onClick={onNotifications}
+          aria-label={t("notif.title")}
           className="relative ml-auto grid size-10 shrink-0 place-items-center rounded-full active:bg-surface-2"
         >
           <Bell className="size-[22px] text-ink" strokeWidth={2} />
           {unreadCount > 0 && (
             <span className="absolute right-1.5 top-1.5 size-2.5 rounded-full bg-split ring-2 ring-canvas" />
           )}
-        </Link>
+        </button>
       </div>
     </header>
   );

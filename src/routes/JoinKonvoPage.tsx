@@ -2,10 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ParticipantAvatar } from "@/components/ParticipantAvatar";
+import { AvatarPicker } from "@/components/AvatarPicker";
 import { TransportPicker } from "@/components/TransportPicker";
 import { useT } from "@/i18n";
 import { useSession } from "@/session";
-import { getMembers, getTripPreview, joinTrip, type TripPreview } from "@/lib/db/trips";
+import {
+  getMembers,
+  getTripPreview,
+  joinTrip,
+  updateMyMemberProfile,
+  type TripPreview,
+} from "@/lib/db/trips";
 import { cn } from "@/lib/utils";
 import type { TransportType, TripMember } from "@/lib/konvo/types";
 
@@ -20,7 +27,8 @@ export function JoinKonvoPage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const t = useT();
-  const { displayName, setDisplayName } = useSession();
+  const { displayName, setDisplayName, phone, setPhone, avatarUrl, setAvatarUrl } =
+    useSession();
 
   const [preview, setPreview] = useState<TripPreview | null>(null);
   const [drivers, setDrivers] = useState<TripMember[]>([]);
@@ -57,7 +65,9 @@ export function JoinKonvoPage() {
         displayName: name.trim(),
         transport,
         ridingWith: transport === "passenger" ? ridingWith : null,
+        avatarUrl,
       });
+      await updateMyMemberProfile(tripId, { phone, avatarUrl }).catch(() => {});
       navigate(`/konvo/${tripId}`, { replace: true });
     } catch (e) {
       setError((e as Error).message);
@@ -90,14 +100,35 @@ export function JoinKonvoPage() {
         <h2 className="mb-2 mt-8 text-[13px] font-extrabold uppercase tracking-[0.07em] text-ink-35">
           {t("new.yourName")}
         </h2>
+        <div className="flex items-center gap-3">
+          <AvatarPicker
+            name={name}
+            colorIndex={1}
+            value={avatarUrl}
+            onChange={setAvatarUrl}
+            size="md"
+          />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("new.yourName")}
+            className="min-w-0 flex-1 rounded-card border border-hairline bg-surface px-4 font-semibold shadow-card outline-none placeholder:text-ink-35"
+            style={{ height: 52 }}
+            autoFocus
+          />
+        </div>
+
+        {/* Telefone e o plano B: se o app falhar, o grupo ainda liga. */}
         <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t("new.yourName")}
-          className="w-full rounded-card border border-hairline bg-surface px-4 font-semibold shadow-card outline-none placeholder:text-ink-35"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          type="tel"
+          inputMode="tel"
+          placeholder={t("new.phone")}
+          className="mt-2 w-full rounded-card border border-hairline bg-surface px-4 font-semibold shadow-card outline-none placeholder:text-ink-35"
           style={{ height: 52 }}
-          autoFocus
         />
+        <p className="mt-1.5 text-[12.5px] font-semibold text-ink-35">{t("new.phoneCopy")}</p>
 
         <h2 className="mb-2 mt-6 text-[13px] font-extrabold uppercase tracking-[0.07em] text-ink-35">
           {t("new.howYouGo")}

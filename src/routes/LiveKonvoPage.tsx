@@ -15,6 +15,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ActionBar } from "@/components/ActionBar";
+import { ArrivalCelebration } from "@/components/ArrivalCelebration";
 import { BottomSheet } from "@/components/BottomSheet";
 import { CallSheet } from "@/components/CallSheet";
 import { InviteSheet } from "@/components/InviteSheet";
@@ -76,6 +77,8 @@ export function LiveKonvoPage({ demo = false }: Props) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [confirmEmergency, setConfirmEmergency] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [celebrated, setCelebrated] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
 
   const { trip, me, vehicles, status } = live;
 
@@ -101,6 +104,14 @@ export function LiveKonvoPage({ demo = false }: Props) {
     if (demo || !me || !tripId) return;
     await sendQuickAction(tripId, me.id, kind, me.displayName).catch(() => {});
   };
+
+  // A comemoracao dispara UMA vez, quando a propria pessoa chega. Repetir a
+  // cada atualizacao de posicao transformaria o momento em incomodo.
+  const myDerived = live.members.find((m) => m.id === me?.id);
+  if (!demo && !celebrated && myDerived?.state === "arrived") {
+    setCelebrated(true);
+    setCelebrating(true);
+  }
 
   const lead = vehicles.reduce<Vehicle | null>(
     (a, b) => (a === null || b.behindByM < a.behindByM ? b : a),
@@ -314,6 +325,12 @@ export function LiveKonvoPage({ demo = false }: Props) {
           code={trip.code}
         />
       )}
+
+      <ArrivalCelebration
+        open={celebrating}
+        onClose={() => setCelebrating(false)}
+        destination={trip.name}
+      />
 
       <BottomSheet open={navOpen} onOpenChange={setNavOpen} title={t("live.openWith")}>
         <div className="flex flex-col gap-2">

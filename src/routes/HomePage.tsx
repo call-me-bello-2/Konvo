@@ -1,7 +1,8 @@
-import { ArrowRight, ChevronRight, MapPin, Search, Users } from "lucide-react";
+import { ChevronRight, MapPin, Users } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { ChevronMotif } from "@/components/ChevronMotif";
+import { DestinationSearch } from "@/components/DestinationSearch";
 import { RoutePreview } from "@/components/RoutePreview";
 import { useMyTrips, type TripSummary } from "@/hooks/useMyTrips";
 import { useI18n, useT } from "@/i18n";
@@ -45,29 +46,21 @@ export function HomePage() {
   return (
     <div className="px-4 pb-8">
       {/* --- 1. para onde vamos ------------------------------------------- */}
-      <div className="flex items-center gap-1.5 pt-1 text-[14px] font-bold text-ink-50">
-        <MapPin className="size-[15px] text-konvo-500" strokeWidth={2.5} />
-        {t("home.eyebrow")}
-      </div>
-
-      <h1 className="mt-1.5 text-[38px] font-extrabold leading-[1.05] tracking-[-0.03em]">
+      <h1 className="pt-2 text-[38px] font-extrabold leading-[1.05] tracking-[-0.03em]">
         {t("home.headingA")}
         <span className="text-konvo-500">{t("home.headingB")}</span>
       </h1>
 
-      <button
-        type="button"
-        onClick={() => navigate("/new?mode=together")}
-        className="mt-5 flex w-full items-center gap-3 rounded-pill border border-hairline bg-surface py-2 pl-5 pr-2 text-left shadow-card active:bg-surface-2"
-      >
-        <Search className="size-[19px] shrink-0 text-ink-35" strokeWidth={2.5} />
-        <span className="min-w-0 flex-1 truncate text-[16px] font-semibold text-ink-35">
-          {t("home.addDestination")}
-        </span>
-        <span className="grid size-11 shrink-0 place-items-center rounded-full bg-konvo-500 text-white">
-          <ArrowRight className="size-5" strokeWidth={2.75} />
-        </span>
-      </button>
+      {/* A busca acontece aqui mesmo; a troca de tela vira consequencia de
+          escolher um destino, e nao pre-requisito para procurar um. */}
+      <DestinationSearch
+        className="mt-5"
+        onPick={(p) =>
+          navigate(
+            `/new?mode=together&dest=${encodeURIComponent(p.name)}&lat=${p.lat}&lng=${p.lng}`,
+          )
+        }
+      />
 
       {/* --- 2. recebi um convite ----------------------------------------- */}
       <div className="mt-3.5 flex items-center gap-2 text-[14px]">

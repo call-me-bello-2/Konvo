@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Flag, Fuel, MapPin, PauseCircle, Split, UserPlus, Users } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { ChevronMotif } from "@/components/ChevronMotif";
 import { supabase } from "@/lib/supabase";
@@ -60,6 +60,7 @@ const LABEL: Record<string, TranslationKey> = {
 export function ActivityPage() {
   const t = useT();
   const { locale } = useI18n();
+  const navigate = useNavigate();
   const { userId, loading: sessionLoading } = useSession();
 
   const [events, setEvents] = useState<EventRow[]>([]);
@@ -92,15 +93,25 @@ export function ActivityPage() {
     );
   }
 
+  // Sem conversa nenhuma, o que falta nao e conteudo — e gente. A tela pede a
+  // unica coisa que resolve isso.
   if (events.length === 0) {
     return (
-      <div className="grid h-full place-items-center px-10 text-center">
-        <div>
+      <div className="grid h-full place-items-center px-8 text-center">
+        <div className="w-full max-w-xs">
           <ChevronMotif className="mx-auto mb-5" />
-          <h2 className="text-[20px] font-extrabold">{t("activity.empty")}</h2>
-          <p className="mt-1.5 text-[14px] font-semibold text-ink-50">
-            {t("activity.emptyCopy")}
+          <h2 className="text-[20px] font-extrabold">{t("inbox.emptyInvite")}</h2>
+          <p className="mt-1.5 text-[14px] font-semibold leading-snug text-ink-50">
+            {t("inbox.emptyInviteCopy")}
           </p>
+          <button
+            type="button"
+            onClick={() => navigate("/new?mode=together")}
+            className="mt-6 h-13 w-full rounded-pill bg-konvo-500 font-extrabold text-white active:bg-konvo-600"
+            style={{ height: 52 }}
+          >
+            {t("inbox.startKonvo")}
+          </button>
         </div>
       </div>
     );

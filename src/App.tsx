@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { BottomNavigation } from "./components/BottomNavigation";
 import { KonvoHeader } from "./components/KonvoHeader";
 import { NewKonvoSheet } from "./components/NewKonvoSheet";
+import { NotificationSheet } from "./components/NotificationSheet";
 import { SetupNotice } from "./components/SetupNotice";
 import { useMyTrips } from "./hooks/useMyTrips";
 import { HomePage } from "./routes/HomePage";
@@ -28,6 +29,7 @@ const FULLSCREEN = ["/konvo/", "/meet/", "/join", "/new", "/demo"];
 export function App() {
   const { pathname } = useLocation();
   const [newOpen, setNewOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const chrome = !FULLSCREEN.some((p) => pathname.startsWith(p));
 
@@ -41,7 +43,10 @@ export function App() {
   return (
     <div className="flex h-full flex-col bg-canvas">
       {chrome && (
-        <KonvoHeader onNewKonvo={() => setNewOpen(true)} />
+        <KonvoHeader
+          onNewKonvo={() => setNewOpen(true)}
+          onNotifications={() => setNotifOpen(true)}
+        />
       )}
       {chrome && <SetupNotice />}
 
@@ -71,6 +76,8 @@ export function App() {
       </main>
 
       {chrome && <BottomNavigation onNewKonvo={() => setNewOpen(true)} />}
+
+      <NotificationSheet open={notifOpen} onOpenChange={setNotifOpen} />
 
       <NewKonvoSheet
         open={newOpen}

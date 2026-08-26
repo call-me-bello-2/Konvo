@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, Search } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+import { AvatarPicker } from "@/components/AvatarPicker";
 import { TransportPicker } from "@/components/TransportPicker";
 import { useT } from "@/i18n";
 import { useSession } from "@/session";
-import { createTrip } from "@/lib/db/trips";
+import { createTrip, updateMyMemberProfile } from "@/lib/db/trips";
 import { searchPlaces, type Place } from "@/lib/services/geocode";
 import { fetchRoute } from "@/lib/services/routing";
 import type { LatLng, TransportType, TripMode } from "@/lib/konvo/types";
@@ -22,7 +23,8 @@ export function NewKonvoPage() {
   const t = useT();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const { displayName, setDisplayName } = useSession();
+  const { displayName, setDisplayName, phone, setPhone, avatarUrl, setAvatarUrl } =
+    useSession();
 
   const mode = (params.get("mode") as TripMode) ?? "together";
 
@@ -97,6 +99,7 @@ export function NewKonvoPage() {
         startsAt: null,
       });
 
+      await updateMyMemberProfile(trip.id, { phone, avatarUrl }).catch(() => {});
       navigate(`/konvo/${trip.id}`, { replace: true });
     } catch (e) {
       setError((e as Error).message);
@@ -164,13 +167,34 @@ export function NewKonvoPage() {
 
         {/* --- quem e voce --------------------------------------------------- */}
         <Label>{t("new.yourName")}</Label>
+        <div className="flex items-center gap-3">
+          <AvatarPicker
+            name={name}
+            colorIndex={1}
+            value={avatarUrl}
+            onChange={setAvatarUrl}
+            size="md"
+          />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("new.yourName")}
+            className="min-w-0 flex-1 rounded-card border border-hairline bg-surface px-4 font-semibold shadow-card outline-none placeholder:text-ink-35"
+            style={{ height: 52 }}
+          />
+        </div>
+
+        {/* Telefone e o plano B: se o app falhar, o grupo ainda liga. */}
         <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t("new.yourName")}
-          className="h-13 w-full rounded-card border border-hairline bg-surface px-4 font-semibold shadow-card outline-none placeholder:text-ink-35"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          type="tel"
+          inputMode="tel"
+          placeholder={t("new.phone")}
+          className="mt-2 w-full rounded-card border border-hairline bg-surface px-4 font-semibold shadow-card outline-none placeholder:text-ink-35"
           style={{ height: 52 }}
         />
+        <p className="mt-1.5 text-[12.5px] font-semibold text-ink-35">{t("new.phoneCopy")}</p>
 
         {/* --- veiculo ------------------------------------------------------- */}
         <Label>{t("new.howYouGo")}</Label>
