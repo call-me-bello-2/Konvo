@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+
+  "// rewrites": "O Konvo e uma SPA: /demo, /trips e /konvo/<id> nao existem como arquivo. Sem isto a Vercel devolve 404 em tudo que nao seja a raiz — e o link de convite, que e /join/<codigo>, nunca abriria. Os rewrites so entram DEPOIS da checagem do sistema de arquivos, entao os assets reais continuam sendo servidos normalmente.",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+
+  "// headers": "Os arquivos em /assets tem hash no nome, entao podem ser cacheados para sempre. Numa viagem com sinal ruim, cada byte que o celular nao precisa rebaixar conta.",
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    }
+  ]
+}
