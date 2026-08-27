@@ -257,6 +257,7 @@ export const en = {
   "arrive.subtitle": "{name}",
   "arrive.together": "Together for {percent}% of the trip",
   "arrive.done": "Done",
+  "live.sending": "Sending…",
 } as const;
 
 export type TranslationKey = keyof typeof en;

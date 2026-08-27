@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { supabase } from "@/lib/supabase";
 import { voiceNoteUrl } from "@/lib/db/voice";
+import { beepIncoming, staticBurst } from "@/lib/audio/radioSounds";
 
 /**
  * Recebe e toca os recados de voz do grupo.
@@ -43,17 +44,25 @@ export function useVoiceNotes(
     playing.current = true;
     setSpeaking(next.name);
 
+    // Bipe antes da voz: da meio segundo para quem esta dirigindo entender que
+    // vem recado, em vez de a voz comecar do nada no meio do transito.
+    beepIncoming();
+    staticBurst(0.08);
+
     const el = audio.current ?? new Audio();
     audio.current = el;
     el.src = next.url;
     el.onended = playNext;
     el.onerror = playNext;
 
-    void el.play().catch(() => {
-      // Alguns navegadores exigem um gesto do usuario antes do primeiro som.
-      // Depois que a pessoa tocar em qualquer coisa na tela, passa a funcionar.
-      playNext();
-    });
+    // Espera o bipe terminar antes de soltar a voz.
+    setTimeout(() => {
+      void el.play().catch(() => {
+        // Alguns navegadores exigem um gesto do usuario antes do primeiro som.
+        // Depois que a pessoa tocar em qualquer coisa na tela, passa a funcionar.
+        playNext();
+      });
+    }, 260);
   }, []);
 
   useEffect(() => {

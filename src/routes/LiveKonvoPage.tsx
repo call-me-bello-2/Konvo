@@ -175,8 +175,23 @@ export function LiveKonvoPage({ demo = false }: Props) {
       </header>
 
       {speaking ? (
-        <div className="shrink-0 bg-konvo-500 px-4 py-2.5 text-[13px] font-bold text-white">
-          {t("live.isTalking", { name: speaking })}
+        <div className="animate-fade flex shrink-0 items-center gap-2.5 bg-konvo-500 px-4 py-3 text-white">
+          {/* Tres barras pulsando: le-se como som saindo, sem precisar de texto */}
+          <span className="flex items-end gap-[3px]" aria-hidden="true">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="w-[3px] rounded-full bg-white"
+                style={{
+                  height: 14,
+                  animation: `konvo-chevron 0.7s ${i * 0.14}s ease-in-out infinite`,
+                }}
+              />
+            ))}
+          </span>
+          <span className="text-[14px] font-extrabold">
+            {t("live.isTalking", { name: speaking })}
+          </span>
         </div>
       ) : (
         !demo && <Banners live={real} t={t} />

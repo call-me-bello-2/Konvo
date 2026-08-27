@@ -258,4 +258,5 @@ export const ptBR: Record<TranslationKey, string> = {
   "arrive.subtitle": "{name}",
   "arrive.together": "Juntos em {percent}% da viagem",
   "arrive.done": "Pronto",
+  "live.sending": "Enviando…",
 };

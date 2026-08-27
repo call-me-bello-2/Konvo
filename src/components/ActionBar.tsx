@@ -41,16 +41,18 @@ export function ActionBar({
 
   return (
     <div className="flex flex-col gap-2">
-      {memberId && !demo ? (
+      {memberId || demo ? (
         <TalkButton
+          demo={demo}
           tripId={tripId}
-          memberId={memberId}
+          memberId={memberId ?? "demo"}
           listenerCount={listenerCount}
           idleLabel={t("live.holdToTalk")}
+          sendingLabel={t("live.sending")}
           label={(n) => t("live.talkingTo", { count: n })}
         />
       ) : (
-        <div className="grid h-14 place-items-center rounded-pill bg-surface-2 text-[15px] font-bold text-ink-35">
+        <div className="grid h-[76px] place-items-center rounded-pill bg-surface-2 text-[16px] font-bold text-ink-35">
           {t("live.holdToTalk")}
         </div>
       )}
