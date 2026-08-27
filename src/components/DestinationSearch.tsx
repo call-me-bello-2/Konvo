@@ -17,11 +17,13 @@ import { cn } from "@/lib/utils";
 
 interface Props {
   onPick: (place: Place) => void;
-  /** cor de fundo do campo quando fechado */
+  /** texto do campo quando ja ha um lugar escolhido */
+  value?: string;
+  placeholder?: string;
   className?: string;
 }
 
-export function DestinationSearch({ onPick, className }: Props) {
+export function DestinationSearch({ onPick, value, placeholder, className }: Props) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -74,10 +76,10 @@ export function DestinationSearch({ onPick, className }: Props) {
 
         <input
           ref={input}
-          value={query}
+          value={open ? query : (value ?? query)}
           onFocus={() => setOpen(true)}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("home.addDestination")}
+          placeholder={placeholder ?? t("home.addDestination")}
           autoComplete="off"
           className="min-w-0 flex-1 bg-transparent py-1.5 text-[16px] font-semibold outline-none placeholder:text-ink-35"
         />

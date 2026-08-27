@@ -258,6 +258,23 @@ export const en = {
   "arrive.together": "Together for {percent}% of the trip",
   "arrive.done": "Done",
   "live.sending": "Sending…",
+
+  // --- ponto de encontro ---
+  "new.when": "When?",
+  "new.now": "Leave now",
+  "new.later": "Schedule",
+  "new.meetFirst": "Meet before leaving?",
+  "new.meetFirstCopy": "For when people leave from different places",
+  "new.meetPoint": "Meeting point",
+  "new.meetTime": "Meeting time",
+  "new.noMeet": "We already leave together",
+  "new.searchMeet": "Where do you meet?",
+  "join.meetAt": "Meet at",
+  "join.thenGoTo": "Then to",
+  "join.plan": "The plan",
+  "live.goToMeeting": "Go to meeting point",
+  "live.goToDestination": "Go to destination",
+  "live.meetingPhase": "Meeting first at {place}",
 } as const;
 
 export type TranslationKey = keyof typeof en;

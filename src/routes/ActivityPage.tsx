@@ -1,91 +1,89 @@
 import { useEffect, useState } from "react";
-import { Flag, Fuel, MapPin, PauseCircle, Split, UserPlus, Users } from "lucide-react";
+import { ChevronRight, Radio, Users } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { ChevronMotif } from "@/components/ChevronMotif";
+import { ParticipantAvatar } from "@/components/ParticipantAvatar";
+import { useMyTrips } from "@/hooks/useMyTrips";
 import { supabase } from "@/lib/supabase";
 import { useI18n, useT } from "@/i18n";
-import { useSession } from "@/session";
 import { formatAgo } from "@/lib/konvo/format";
-import { cn } from "@/lib/utils";
-import type { TranslationKey } from "@/i18n/en";
+import { toMember, type MemberRow } from "@/lib/db/trips";
+import type { TripMember } from "@/lib/konvo/types";
 
 /**
- * Activity (brief §21) — caixa de entrada, nao feed social.
+ * Conversa (brief §21).
  *
- * O que aconteceu nas viagens da pessoa, em ordem. Sem posts, curtidas,
- * seguidores ou metricas publicas (§35).
+ * Uma linha por VIAGEM, e nao um log solto de eventos. A pergunta que a pessoa
+ * traz aqui e "com quem eu falo?", e a resposta e sempre um grupo — o pessoal
+ * daquela viagem.
+ *
+ * Entrar numa viagem ja coloca a pessoa na conversa: nao ha lista de amigos
+ * para montar, nem convite separado para aceitar. Quem esta no mesmo Konvo
+ * fala com quem esta no mesmo Konvo, e ponto.
  */
 
-interface EventRow {
-  id: string;
-  type: string;
-  payload: Record<string, unknown>;
-  created_at: string;
-  trip_id: string;
-  trips: { name: string } | null;
-  trip_members: { display_name: string } | null;
+interface Row {
+  tripId: string;
+  name: string;
+  members: TripMember[];
+  lastText: string | null;
+  lastAt: number | null;
 }
-
-const ICON: Record<string, typeof MapPin> = {
-  member_joined: UserPlus,
-  member_left: UserPlus,
-  trip_started: Flag,
-  trip_completed: Flag,
-  stop_proposed: MapPin,
-  stop_accepted: MapPin,
-  quick_action: Fuel,
-  group_split: Split,
-  group_rejoined: Users,
-  member_stopped: PauseCircle,
-  member_arrived: Flag,
-  voice_note: Users,
-};
-
-const LABEL: Record<string, TranslationKey> = {
-  member_joined: "event.memberJoined",
-  member_left: "event.memberLeft",
-  trip_started: "event.tripStarted",
-  trip_completed: "event.tripCompleted",
-  stop_proposed: "event.stopProposed",
-  stop_accepted: "event.stopAccepted",
-  quick_action: "event.stopProposed",
-  group_split: "event.groupSplit",
-  group_rejoined: "event.groupRejoined",
-  member_stopped: "event.memberStopped",
-  member_arrived: "event.memberArrived",
-  voice_note: "event.voiceNote",
-};
 
 export function ActivityPage() {
   const t = useT();
   const { locale } = useI18n();
   const navigate = useNavigate();
-  const { userId, loading: sessionLoading } = useSession();
+  const { trips, loading: tripsLoading } = useMyTrips();
 
-  const [events, setEvents] = useState<EventRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<Row[] | null>(null);
 
   useEffect(() => {
-    if (sessionLoading) return;
-    if (!userId) {
-      setLoading(false);
+    if (tripsLoading) return;
+    if (trips.length === 0) {
+      setRows([]);
       return;
     }
 
-    // O RLS ja limita aos eventos das viagens da pessoa.
-    supabase
-      .from("trip_events")
-      .select("*, trips(name), trip_members(display_name)")
-      .order("created_at", { ascending: false })
-      .limit(60)
-      .then(({ data }) => {
-        setEvents((data as EventRow[] | null) ?? []);
-        setLoading(false);
-      });
-  }, [userId, sessionLoading]);
+    const ids = trips.map((s) => s.trip.id);
 
-  if (loading) {
+    void Promise.all([
+      supabase.from("trip_members").select("*").in("trip_id", ids),
+      supabase
+        .from("trip_events")
+        .select("trip_id, type, payload, created_at")
+        .in("trip_id", ids)
+        .order("created_at", { ascending: false })
+        .limit(120),
+    ]).then(([m, e]) => {
+      const byTrip = new Map<string, TripMember[]>();
+      for (const raw of (m.data as MemberRow[] | null) ?? []) {
+        const list = byTrip.get(raw.trip_id) ?? [];
+        list.push(toMember(raw));
+        byTrip.set(raw.trip_id, list);
+      }
+
+      const lastByTrip = new Map<string, { text: string; at: number }>();
+      for (const ev of (e.data as { trip_id: string; type: string; created_at: string }[] | null) ??
+        []) {
+        if (lastByTrip.has(ev.trip_id)) continue;
+        lastByTrip.set(ev.trip_id, { text: ev.type, at: Date.parse(ev.created_at) });
+      }
+
+      setRows(
+        trips.map((s) => ({
+          tripId: s.trip.id,
+          name: s.trip.name,
+          members: byTrip.get(s.trip.id) ?? [],
+          lastText: lastByTrip.get(s.trip.id)?.text ?? null,
+          lastAt: lastByTrip.get(s.trip.id)?.at ?? null,
+        })),
+      );
+    });
+  }, [trips, tripsLoading]);
+
+  if (tripsLoading || rows === null) {
     return (
       <div className="grid h-full place-items-center">
         <ChevronMotif className="opacity-40" />
@@ -93,9 +91,8 @@ export function ActivityPage() {
     );
   }
 
-  // Sem conversa nenhuma, o que falta nao e conteudo — e gente. A tela pede a
-  // unica coisa que resolve isso.
-  if (events.length === 0) {
+  // Sem conversa nenhuma, o que falta nao e conteudo — e gente.
+  if (rows.length === 0) {
     return (
       <div className="grid h-full place-items-center px-8 text-center">
         <div className="w-full max-w-xs">
@@ -107,7 +104,7 @@ export function ActivityPage() {
           <button
             type="button"
             onClick={() => navigate("/new?mode=together")}
-            className="mt-6 h-13 w-full rounded-pill bg-konvo-500 font-extrabold text-white active:bg-konvo-600"
+            className="mt-6 w-full rounded-pill bg-konvo-500 font-extrabold text-white active:bg-konvo-600"
             style={{ height: 52 }}
           >
             {t("inbox.startKonvo")}
@@ -120,39 +117,58 @@ export function ActivityPage() {
   return (
     <div className="px-4 pb-6 pt-4">
       <h1 className="mb-4 text-[26px] font-extrabold leading-tight tracking-[-0.02em]">
-        {t("activity.title")}
+        {t("nav.inbox")}
       </h1>
 
-      <div className="flex flex-col">
-        {events.map((e, i) => {
-          const Icon = ICON[e.type] ?? MapPin;
-          const key = LABEL[e.type] ?? "event.tripStarted";
-          const who =
-            e.trip_members?.display_name ?? (e.payload?.name as string | undefined) ?? "";
-          const ageMs = Date.now() - Date.parse(e.created_at);
+      <div className="flex flex-col gap-2">
+        {rows.map((r) => (
+          <Link
+            key={r.tripId}
+            to={`/konvo/${r.tripId}`}
+            className="flex items-center gap-3 rounded-card border border-hairline bg-surface p-3 shadow-card active:bg-surface-2"
+          >
+            <div className="grid size-12 shrink-0 place-items-center rounded-full bg-konvo-50 text-konvo-500">
+              <Radio className="size-6" strokeWidth={2.25} />
+            </div>
 
-          return (
-            <Link
-              key={e.id}
-              to={`/konvo/${e.trip_id}`}
-              className={cn(
-                "flex items-center gap-3 py-3.5",
-                i < events.length - 1 && "border-b border-hairline",
-              )}
-            >
-              <div className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-2 text-ink-50">
-                <Icon className="size-[19px]" strokeWidth={2.25} />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[16px] font-extrabold leading-tight">{r.name}</div>
+              <div className="mt-1 flex items-center gap-1.5 text-[13px] font-semibold text-ink-50">
+                <Users className="size-[14px] shrink-0" strokeWidth={2.5} />
+                {t("count.people", { count: r.members.length })}
+                {r.lastAt && (
+                  <>
+                    <span className="text-ink-35">·</span>
+                    <span className="truncate">{formatAgo(Date.now() - r.lastAt, locale)}</span>
+                  </>
+                )}
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[15px] font-bold">{t(key, { name: who })}</div>
-                <div className="truncate text-[13px] font-semibold text-ink-35">
-                  {e.trips?.name ? `${e.trips.name} · ` : ""}
-                  {formatAgo(ageMs, locale)}
-                </div>
+
+              {/* As caras de quem esta ali: e o que faz reconhecer o grupo antes
+                  de ler o nome da viagem. */}
+              <div className="mt-2 flex -space-x-2">
+                {r.members.slice(0, 5).map((m) => (
+                  <ParticipantAvatar
+                    key={m.id}
+                    name={m.displayName}
+                    colorIndex={m.colorIndex}
+                    avatarUrl={m.avatarUrl}
+                    size="sm"
+                    short
+                    ring
+                  />
+                ))}
+                {r.members.length > 5 && (
+                  <span className="grid size-8 place-items-center rounded-full bg-surface-2 text-[11px] font-bold text-ink-50 ring-[2.5px] ring-surface">
+                    +{r.members.length - 5}
+                  </span>
+                )}
               </div>
-            </Link>
-          );
-        })}
+            </div>
+
+            <ChevronRight className="size-5 shrink-0 text-ink-35" strokeWidth={2.5} />
+          </Link>
+        ))}
       </div>
     </div>
   );

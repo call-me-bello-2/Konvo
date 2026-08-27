@@ -259,4 +259,21 @@ export const ptBR: Record<TranslationKey, string> = {
   "arrive.together": "Juntos em {percent}% da viagem",
   "arrive.done": "Pronto",
   "live.sending": "Enviando…",
+
+  // --- ponto de encontro ---
+  "new.when": "Quando?",
+  "new.now": "Sair agora",
+  "new.later": "Agendar",
+  "new.meetFirst": "Encontrar antes de sair?",
+  "new.meetFirstCopy": "Pra quando as pessoas saem de lugares diferentes",
+  "new.meetPoint": "Ponto de encontro",
+  "new.meetTime": "Horário do encontro",
+  "new.noMeet": "Já saímos juntos",
+  "new.searchMeet": "Onde vocês se encontram?",
+  "join.meetAt": "Encontro em",
+  "join.thenGoTo": "Depois vão pra",
+  "join.plan": "O plano",
+  "live.goToMeeting": "Ir ao ponto de encontro",
+  "live.goToDestination": "Ir ao destino",
+  "live.meetingPhase": "Encontro primeiro em {place}",
 };

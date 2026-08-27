@@ -56,7 +56,14 @@ export function TripsPage() {
               }
               className="overflow-hidden rounded-card border border-hairline bg-surface text-left shadow-card active:opacity-80"
             >
-              <div className="h-[68px] w-full" style={{ background: d.tint }} />
+              <div className="relative h-[84px] w-full" style={{ background: d.tint }}>
+                <img
+                  src={d.photo}
+                  alt=""
+                  loading="lazy"
+                  className="absolute inset-0 size-full object-cover"
+                />
+              </div>
               <div className="px-3 py-2.5">
                 <div className="truncate text-[14px] font-extrabold leading-tight">{d.name}</div>
                 <div className="mt-0.5 truncate text-[12px] font-semibold text-ink-35">

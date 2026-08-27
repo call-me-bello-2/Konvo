@@ -31,6 +31,10 @@ interface TripRow {
   destination_lng: number;
   origin_lat: number | null;
   origin_lng: number | null;
+  meeting_name: string | null;
+  meeting_lat: number | null;
+  meeting_lng: number | null;
+  meet_at: string | null;
   route_polyline: string | null;
   route_distance_m: number | null;
   route_duration_s: number | null;
@@ -81,6 +85,11 @@ export function toTrip(r: TripRow): Trip {
     origin: r.origin_lat !== null && r.origin_lng !== null
       ? { lat: r.origin_lat, lng: r.origin_lng }
       : null,
+    meeting:
+      r.meeting_name && r.meeting_lat !== null && r.meeting_lng !== null
+        ? { name: r.meeting_name, lat: r.meeting_lat, lng: r.meeting_lng }
+        : null,
+    meetAt: r.meet_at,
     routePolyline: r.route_polyline,
     routeDistanceM: r.route_distance_m,
     routeDurationS: r.route_duration_s,
@@ -159,6 +168,8 @@ export interface TripPreview {
   status: TripStatus;
   destinationName: string;
   startsAt: string | null;
+  meetingName: string | null;
+  meetAt: string | null;
   memberCount: number;
   hostName: string | null;
   alreadyMember: boolean;
@@ -185,6 +196,8 @@ export async function getTripPreview(code: string): Promise<TripPreview | null> 
     status: row.status,
     destinationName: row.destination_name,
     startsAt: row.starts_at,
+    meetingName: row.meeting_name ?? null,
+    meetAt: row.meet_at ?? null,
     memberCount: Number(row.member_count),
     hostName: row.host_name,
     alreadyMember: row.already_member,
@@ -205,6 +218,9 @@ export interface CreateTripInput {
   route: { polyline: string | null; distanceM: number; durationS: number } | null;
   /** null = comeca agora */
   startsAt: string | null;
+  /** onde o grupo se junta antes de partir */
+  meeting: (LatLng & { name: string }) | null;
+  meetAt: string | null;
 }
 
 export async function createTrip(input: CreateTripInput): Promise<Trip> {
@@ -223,6 +239,10 @@ export async function createTrip(input: CreateTripInput): Promise<Trip> {
     p_route_distance_m: input.route?.distanceM ?? null,
     p_route_duration_s: input.route?.durationS ?? null,
     p_starts_at: input.startsAt,
+    p_meeting_name: input.meeting?.name ?? null,
+    p_meeting_lat: input.meeting?.lat ?? null,
+    p_meeting_lng: input.meeting?.lng ?? null,
+    p_meet_at: input.meetAt,
     }),
   );
   if (error) throw error;

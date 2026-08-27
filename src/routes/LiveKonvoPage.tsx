@@ -113,6 +113,13 @@ export function LiveKonvoPage({ demo = false }: Props) {
     setCelebrating(true);
   }
 
+  // Enquanto a viagem nao comecou e ha ponto de encontro, tudo aponta para
+  // ele: navegacao, mapa e ETA.
+  const navTarget =
+    trip.status === "upcoming" && trip.meeting
+      ? { point: trip.meeting, isMeeting: true }
+      : { point: trip.destination, isMeeting: false };
+
   const lead = vehicles.reduce<Vehicle | null>(
     (a, b) => (a === null || b.behindByM < a.behindByM ? b : a),
     null,
@@ -197,6 +204,12 @@ export function LiveKonvoPage({ demo = false }: Props) {
         !demo && <Banners live={real} t={t} />
       )}
 
+      {navTarget.isMeeting && (
+        <div className="shrink-0 bg-konvo-50 px-4 py-2.5 text-[13px] font-bold text-konvo-700">
+          {t("live.meetingPhase", { place: trip.meeting!.name })}
+        </div>
+      )}
+
       {demo && (
         <div className="shrink-0 bg-konvo-50 px-4 py-2 text-[12px] font-bold text-konvo-700">
           {t("live.demoBanner")}
@@ -238,7 +251,13 @@ export function LiveKonvoPage({ demo = false }: Props) {
           </div>
         )}
 
-        {demo && (
+        {navTarget.isMeeting && (
+        <div className="shrink-0 bg-konvo-50 px-4 py-2.5 text-[13px] font-bold text-konvo-700">
+          {t("live.meetingPhase", { place: trip.meeting!.name })}
+        </div>
+      )}
+
+      {demo && (
           <DemoControls
             scenario={scenario}
             onScenario={setScenario}
@@ -348,11 +367,19 @@ export function LiveKonvoPage({ demo = false }: Props) {
       />
 
       <BottomSheet open={navOpen} onOpenChange={setNavOpen} title={t("live.openWith")}>
+        {/* Antes de partir, o alvo e o ENCONTRO — nao o destino. Mandar a
+            pessoa para Ubatuba quando o combinado era se juntar no posto seria
+            exatamente o erro que o app existe para evitar. */}
+        {navTarget.isMeeting && (
+          <p className="mb-3 text-[13px] font-bold text-konvo-500">
+            {t("live.goToMeeting")}
+          </p>
+        )}
         <div className="flex flex-col gap-2">
           {(["waze", "gmaps"] as const).map((app) => (
             <a
               key={app}
-              href={navigationUrl(trip.destination, app)}
+              href={navigationUrl(navTarget.point, app)}
               target="_blank"
               rel="noreferrer"
               onClick={() => setNavOpen(false)}

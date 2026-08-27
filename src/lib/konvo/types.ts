@@ -108,6 +108,17 @@ export interface Trip {
   destination: LatLng & { name: string };
   origin: LatLng | null;
 
+  /**
+   * Onde o grupo se junta antes de partir. null quando todos ja saem juntos.
+   *
+   * Existe porque na vida real as pessoas saem de lugares e carros diferentes
+   * e se encontram primeiro — e coordenar ESSE pedaco e mais dificil do que a
+   * estrada em si.
+   */
+  meeting: (LatLng & { name: string }) | null;
+  /** horario combinado do encontro */
+  meetAt: string | null;
+
   /** polyline codificada (precisao 5) devolvida pela OSRM na criacao da trip. */
   routePolyline: string | null;
   routeDistanceM: number | null;

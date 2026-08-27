@@ -3,6 +3,7 @@ import { ChevronLeft, Search } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { AvatarPicker } from "@/components/AvatarPicker";
+import { DestinationSearch } from "@/components/DestinationSearch";
 import { TransportPicker } from "@/components/TransportPicker";
 import { useT } from "@/i18n";
 import { useSession } from "@/session";
@@ -46,6 +47,12 @@ export function NewKonvoPage() {
   const [creating, setCreating] = useState(false);
   const [warn, setWarn] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Quando marcado, a viagem nasce agendada e o convite leva o plano inteiro:
+  // onde encontrar, que horas, e para onde vao depois.
+  const [wantsMeet, setWantsMeet] = useState(false);
+  const [meet, setMeet] = useState<Place | null>(null);
+  const [meetAt, setMeetAt] = useState("");
 
   // Origem: usada para calcular a rota. Se a pessoa negar, a viagem e criada
   // mesmo assim — so as distancias ficam menos precisas ate ela comecar a andar.
@@ -97,6 +104,10 @@ export function NewKonvoPage() {
         transport,
         route,
         startsAt: null,
+        meeting: wantsMeet && meet ? { name: meet.name, lat: meet.lat, lng: meet.lng } : null,
+        // datetime-local devolve horario LOCAL sem fuso; o toISOString converte
+        // para UTC usando o fuso do aparelho, que e o que a pessoa quis dizer.
+        meetAt: wantsMeet && meetAt ? new Date(meetAt).toISOString() : null,
       });
 
       await updateMyMemberProfile(trip.id, { phone, avatarUrl }).catch(() => {});
@@ -200,6 +211,37 @@ export function NewKonvoPage() {
         <Label>{t("new.howYouGo")}</Label>
         <TransportPicker value={transport} onChange={setTransport} />
 
+        {/* --- encontro antes de sair --------------------------------------- */}
+        <Label>{t("new.when")}</Label>
+        <div className="flex gap-2">
+          <ChoiceChip active={!wantsMeet} onClick={() => setWantsMeet(false)}>
+            {t("new.noMeet")}
+          </ChoiceChip>
+          <ChoiceChip active={wantsMeet} onClick={() => setWantsMeet(true)}>
+            {t("new.meetFirst")}
+          </ChoiceChip>
+        </div>
+        <p className="mt-1.5 text-[12.5px] font-semibold text-ink-35">
+          {t("new.meetFirstCopy")}
+        </p>
+
+        {wantsMeet && (
+          <div className="animate-rise mt-3 flex flex-col gap-2">
+            <DestinationSearch
+              placeholder={t("new.searchMeet")}
+              onPick={setMeet}
+              value={meet?.name ?? ""}
+            />
+            <input
+              value={meetAt}
+              onChange={(e) => setMeetAt(e.target.value)}
+              type="datetime-local"
+              className="w-full rounded-card border border-hairline bg-surface px-4 font-semibold shadow-card outline-none"
+              style={{ height: 52 }}
+            />
+          </div>
+        )}
+
         {origin && (
           <p className="mt-3 text-[13px] font-semibold text-ink-35">{t("new.useMyLocation")}</p>
         )}
@@ -218,6 +260,31 @@ export function NewKonvoPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+function ChoiceChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        "flex-1 rounded-card border py-3 text-[14px] font-bold " +
+        (active
+          ? "border-konvo-500 bg-konvo-50 text-konvo-500"
+          : "border-hairline bg-surface text-ink-50")
+      }
+    >
+      {children}
+    </button>
   );
 }
 

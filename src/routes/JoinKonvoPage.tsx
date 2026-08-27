@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Flag, MapPin } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ParticipantAvatar } from "@/components/ParticipantAvatar";
@@ -96,6 +97,41 @@ export function JoinKonvoPage() {
         <p className="mt-2 text-[15px] font-semibold text-ink-50">
           {t("count.people", { count: preview.memberCount })}
         </p>
+
+        {/* O link carrega o plano inteiro: quem recebe ja sabe onde encontrar,
+            que horas, e para onde vao depois — sem precisar perguntar. */}
+        {preview.meetingName && (
+          <div className="mt-5 rounded-card border border-konvo-200 bg-konvo-50 p-4">
+            <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-konvo-500">
+              {t("join.plan")}
+            </div>
+            <div className="mt-2 flex gap-2.5">
+              <MapPin className="mt-0.5 size-[17px] shrink-0 text-konvo-500" strokeWidth={2.5} />
+              <div className="min-w-0">
+                <div className="text-[14px] font-bold leading-snug">
+                  {t("join.meetAt")} {preview.meetingName}
+                </div>
+                {preview.meetAt && (
+                  <div className="tnum mt-0.5 text-[13px] font-semibold text-ink-50">
+                    {new Date(preview.meetAt).toLocaleString(undefined, {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="mt-2 flex gap-2.5">
+              <Flag className="mt-0.5 size-[17px] shrink-0 text-ink-35" strokeWidth={2.5} />
+              <div className="text-[14px] font-bold leading-snug">
+                {t("join.thenGoTo")} {preview.destinationName}
+              </div>
+            </div>
+          </div>
+        )}
 
         <h2 className="mb-2 mt-8 text-[13px] font-extrabold uppercase tracking-[0.07em] text-ink-35">
           {t("new.yourName")}

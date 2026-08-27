@@ -6,6 +6,7 @@ import { deriveGroupStatus } from "@/lib/konvo/groupStatus";
 import { createDeriveContext, deriveMembers } from "@/lib/konvo/memberState";
 import { routeFromPolyline } from "@/lib/konvo/route";
 import { deriveVehicles } from "@/lib/konvo/vehicles";
+import type { Trip } from "@/lib/konvo/types";
 
 /**
  * Viagem simulada, com a mesma forma de `useLiveTrip`.
@@ -63,7 +64,7 @@ export function useSimulatedTrip(enabled: boolean, scenario: ScenarioId, playing
     return { members, vehicles, status: deriveGroupStatus({ members: vehicles }) };
   }, [enabled, scenario, progress, now, route]);
 
-  const trip = useMemo(
+  const trip: Trip = useMemo(
     () => ({
       id: "demo",
       code: "DEMO01",
@@ -72,6 +73,8 @@ export function useSimulatedTrip(enabled: boolean, scenario: ScenarioId, playing
       status: "active" as const,
       destination: fixture.destination,
       origin: fixture.origin,
+      meeting: null,
+      meetAt: null,
       routePolyline: fixture.polyline,
       routeDistanceM: fixture.distanceM,
       routeDurationS: fixture.durationS,

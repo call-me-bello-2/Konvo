@@ -1,0 +1,38 @@
+[
+  {
+    "slug": "ubatuba",
+    "author": "Joalpe",
+    "license": "CC BY-SA 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:20230725_084402.jpg"
+  },
+  {
+    "slug": "campos-do-jordao",
+    "author": "Silvio Chiozini",
+    "license": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:1995_Campos_do_Jordão_-_SP_-_panoramio.jpg"
+  },
+  {
+    "slug": "rio-de-janeiro",
+    "author": "Rafael Rabello de Barros",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Cidade_Maravilhosa.jpg"
+  },
+  {
+    "slug": "santos",
+    "author": "Ricardo Frantz",
+    "license": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Vista_de_Santos.jpg"
+  },
+  {
+    "slug": "ilhabela",
+    "author": "Lucas Lima 91",
+    "license": "CC BY-SA 2.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Sunset_View_-_Ilhabela.jpg"
+  },
+  {
+    "slug": "paraty",
+    "author": "Vani Ribeiro",
+    "license": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Paraty_05.JPG"
+  }
+]
