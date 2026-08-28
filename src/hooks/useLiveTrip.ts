@@ -33,6 +33,9 @@ export function useLiveTrip(tripId: string | undefined) {
   // Posicoes que chegaram por broadcast e ainda nao estao na copia do banco.
   const [liveFixes, setLiveFixes] = useState<Record<string, Fix>>({});
 
+  /** ate quando a propria localizacao esta pausada (epoch ms) */
+  const [pausedUntil, setPausedUntil] = useState<number | null>(null);
+
   const publishRef = useRef<((memberId: string, fix: Fix) => void) | null>(null);
   const ctxRef = useRef<DeriveContext | null>(null);
   const prevStatus = useRef<GroupStatus | null>(null);
@@ -131,6 +134,10 @@ export function useLiveTrip(tripId: string | undefined) {
     async (fix: Fix) => {
       if (!tripId || !me || !ctxRef.current) return;
 
+      // Localizacao pausada: nao publica nada. Nem broadcast, nem banco, nem
+      // fila — guardar para mandar depois derrotaria o proposito da pausa.
+      if (pausedUntil && Date.now() < pausedUntil) return;
+
       // O broadcast e barato e sem estado: manda sempre, mesmo offline (falha
       // silenciosa) — o que nao pode falhar e a fila abaixo.
       publishRef.current?.(me.id, fix);
@@ -162,7 +169,7 @@ export function useLiveTrip(tripId: string | undefined) {
         void queueSize().then(setQueued).catch(() => {});
       }
     },
-    [tripId, me],
+    [tripId, me, pausedUntil],
   );
 
   const isActive = trip?.status === "active";
@@ -273,6 +280,9 @@ export function useLiveTrip(tripId: string | undefined) {
     wakeLock,
     online,
     queued,
+    pausedUntil,
+    pauseLocation: (minutes: number) => setPausedUntil(Date.now() + minutes * 60_000),
+    resumeLocation: () => setPausedUntil(null),
     loading,
     error,
     reload: () => tripId && void refreshMembers(tripId).then(setMembers),

@@ -287,4 +287,17 @@ export const ptBR: Record<TranslationKey, string> = {
   "marker.stopped": "parou",
   "marker.offline": "sem sinal",
   "marker.arrived": "chegou",
+
+  // --- checkpoints e pausa de localizacao ---
+  "ghost.title": "Pausar localização",
+  "ghost.copy": "Parar de compartilhar onde você está, sem sair da viagem.",
+  "ghost.forMinutes": "Por {minutes} minutos",
+  "ghost.pausedFor": "Pausada · faltam {minutes} min",
+  "ghost.resume": "Voltar a compartilhar",
+  "ghost.groupSees": "O grupo vê \"localização pausada\" — nunca uma posição velha fingindo ser atual.",
+  "ghost.short": "Pausada",
+  "member.paused": "Localização pausada",
+  "checkpoint.allHere": "todos",
+  "checkpoint.add": "Adicionar parada",
+  "checkpoint.reached": "{name} chegou em {place}",
 };

@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   Fuel,
   Navigation,
+  EyeOff,
   Layers3,
   Map as MapIcon,
   Pause,
@@ -20,6 +21,8 @@ import { BottomSheet } from "@/components/BottomSheet";
 import { CallSheet } from "@/components/CallSheet";
 import { InviteSheet } from "@/components/InviteSheet";
 import { KonvoMap, type CameraMode } from "@/components/KonvoMap";
+import { CheckpointStrip } from "@/components/CheckpointStrip";
+import { LocationPauseSheet } from "@/components/LocationPauseSheet";
 import { ParticipantRail } from "@/components/ParticipantRail";
 import { SelectedParticipant } from "@/components/SelectedParticipant";
 import { ParticipantAvatar } from "@/components/ParticipantAvatar";
@@ -33,6 +36,7 @@ import { navigationUrl } from "@/lib/services/routing";
 import { SCENARIOS, SCENARIO_ORDER, type ScenarioId } from "@/lib/konvo/simulator";
 import { formatAgo, formatDistance, formatDuration, formatDurationShort } from "@/lib/konvo/format";
 import type { MarkerLabels } from "@/components/vehicleMarker";
+import { deriveCheckpoints } from "@/lib/konvo/checkpoints";
 import { cn } from "@/lib/utils";
 import type { QuickActionKind, Vehicle } from "@/lib/konvo/types";
 import type { TranslationKey } from "@/i18n/en";
@@ -69,6 +73,7 @@ export function LiveKonvoPage({ demo = false }: Props) {
   const [camera, setCamera] = useState<CameraMode>("overview");
   /** participante em foco: camera vai ate ele e a lista vira o cartao dele */
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pauseOpen, setPauseOpen] = useState(false);
 
   // Os dois hooks sao sempre chamados (regra dos hooks); o desativado nao faz
   // trabalho nenhum.
@@ -136,6 +141,10 @@ export function LiveKonvoPage({ demo = false }: Props) {
   };
 
   const selected = vehicles.find((v) => v.id === selectedId) ?? null;
+
+  // Ainda sem checkpoints vindos do banco — a faixa some sozinha quando a
+  // lista esta vazia, entao ligar a fonte depois nao mexe no layout.
+  const checkpoints = deriveCheckpoints([], live.members, new Map());
 
   const lead = vehicles.reduce<Vehicle | null>(
     (a, b) => (a === null || b.behindByM < a.behindByM ? b : a),
@@ -270,6 +279,17 @@ export function LiveKonvoPage({ demo = false }: Props) {
           }}
         />
 
+        {/* Checkpoints no alto do mapa: respondem "podemos seguir?", que vem
+            antes de "onde esta cada um?". */}
+        {checkpoints.length > 0 && (
+          <div className="pointer-events-none absolute inset-x-0 top-0">
+            <CheckpointStrip
+              progress={checkpoints}
+              totalActive={vehicles.filter((v) => v.state !== "arrived").length}
+            />
+          </div>
+        )}
+
         {/* Alternar visao, como num app de navegacao: de cima para entender o
             trajeto, atras do carro para dirigir. */}
         <button
@@ -287,6 +307,27 @@ export function LiveKonvoPage({ demo = false }: Props) {
             {camera === "overview" ? t("live.cameraFollow") : t("live.cameraTop")}
           </span>
         </button>
+
+        {/* Pausar localizacao fica perto da camera porque as duas sao sobre o
+            que a tela mostra — nao sobre o que acontece na viagem. */}
+        {!demo && (
+          <button
+            type="button"
+            onClick={() => setPauseOpen(true)}
+            aria-label={t("ghost.title")}
+            className={cn(
+              "absolute left-3 top-[68px] flex h-11 items-center gap-2 rounded-pill px-3.5 font-bold shadow-card backdrop-blur",
+              live.pausedUntil
+                ? "bg-stretching text-white"
+                : "bg-surface/95 text-ink active:bg-surface-2",
+            )}
+          >
+            <EyeOff className="size-[18px]" strokeWidth={2.4} />
+            {live.pausedUntil && (
+              <span className="text-[13px]">{t("ghost.short")}</span>
+            )}
+          </button>
+        )}
 
         {toast && (
           <div className="pointer-events-none absolute inset-x-4 top-3 rounded-pill bg-ink/90 px-4 py-2.5 text-center text-[13px] font-bold text-canvas">
@@ -422,6 +463,18 @@ export function LiveKonvoPage({ demo = false }: Props) {
           code={trip.code}
         />
       )}
+
+      <LocationPauseSheet
+        open={pauseOpen}
+        onOpenChange={setPauseOpen}
+        pausedMinutes={
+          live.pausedUntil
+            ? Math.max(0, Math.ceil((live.pausedUntil - Date.now()) / 60_000))
+            : null
+        }
+        onPause={live.pauseLocation}
+        onResume={live.resumeLocation}
+      />
 
       <ArrivalCelebration
         open={celebrating}

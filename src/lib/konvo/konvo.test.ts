@@ -22,6 +22,7 @@ import { createDeriveContext, deriveMembers } from "./memberState";
 import { detectTransition, deriveGroupStatus } from "./groupStatus";
 import { formatAgo, formatDistance, formatDuration } from "./format";
 import { countVehicles, deriveVehicles } from "./vehicles";
+import { deriveCheckpoints, isInside, newArrivals, type Checkpoint } from "./checkpoints";
 import { THRESHOLDS as T } from "./thresholds";
 import type { Fix, TransportType, TripMember } from "./types";
 
@@ -615,5 +616,77 @@ describe("caminho próprio", () => {
     const carro = deriveVehicles(derived).find((v) => v.id === "motorista")!;
     expect(carro.roadBound).toBe(true);
     expect(carro.occupants).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Checkpoints
+// ---------------------------------------------------------------------------
+
+describe("checkpoints", () => {
+  const cpAt = (id: string, meters: number, radiusM = 200): Checkpoint => {
+    const p = pointAtDistance(route, meters);
+    return { id, name: id, lat: p.lat, lng: p.lng, atDistanceM: meters, radiusM };
+  };
+
+  it("detecta quem está dentro do raio", () => {
+    const cp = cpAt("posto", 90_000);
+    const { derived } = derive([
+      memberAt("dentro", 90_050),
+      memberAt("longe", 60_000),
+    ]);
+    const by = Object.fromEntries(derived.map((d) => [d.id, d]));
+
+    expect(isInside(by.dentro, cp)).toBe(true);
+    expect(isInside(by.longe, cp)).toBe(false);
+  });
+
+  it("quem já passou continua contando depois de sair do raio", () => {
+    // Sem isto a chegada some da tela no instante em que a pessoa arranca —
+    // e o grupo perde a informação de que ela esteve lá.
+    const cp = cpAt("posto", 90_000);
+    const { derived } = derive([memberAt("a", 95_000), memberAt("b", 90_020)]);
+
+    const progress = deriveCheckpoints([cp], derived, new Map([["posto", new Set(["a"])]]));
+    expect(progress[0].arrivedIds.sort()).toEqual(["a", "b"]);
+    expect(progress[0].complete).toBe(true);
+  });
+
+  it("aponta o próximo checkpoint do grupo", () => {
+    const cps = [cpAt("primeiro", 50_000), cpAt("segundo", 120_000)];
+    const { derived } = derive([memberAt("a", 60_000), memberAt("b", 58_000)]);
+
+    // Primeiro ja foi por todos; o proximo tem que ser o segundo.
+    const arrivals = new Map([["primeiro", new Set(["a", "b"])]]);
+    const progress = deriveCheckpoints(cps, derived, arrivals);
+
+    expect(progress.find((p) => p.checkpoint.id === "primeiro")!.isNext).toBe(false);
+    expect(progress.find((p) => p.checkpoint.id === "segundo")!.isNext).toBe(true);
+  });
+
+  it("só um checkpoint é o próximo por vez", () => {
+    const cps = [cpAt("um", 50_000), cpAt("dois", 120_000), cpAt("tres", 180_000)];
+    const { derived } = derive([memberAt("a", 20_000)]);
+    const progress = deriveCheckpoints(cps, derived, new Map());
+    expect(progress.filter((p) => p.isNext)).toHaveLength(1);
+  });
+
+  it("quem chegou ao destino não segura o grupo num checkpoint", () => {
+    // Esperar por quem ja terminou a viagem seria travar o checkpoint para
+    // sempre.
+    const cp = cpAt("posto", 90_000);
+    const { derived } = derive([
+      memberAt("chegou", route.totalM - 20),
+      memberAt("passou", 90_010),
+    ]);
+    expect(deriveCheckpoints([cp], derived, new Map())[0].complete).toBe(true);
+  });
+
+  it("newArrivals não repete o que já foi registrado", () => {
+    const cp = cpAt("posto", 90_000);
+    const { derived } = derive([memberAt("eu", 90_030)]);
+
+    expect(newArrivals([cp], derived[0], new Set())).toHaveLength(1);
+    expect(newArrivals([cp], derived[0], new Set(["posto"]))).toHaveLength(0);
   });
 });

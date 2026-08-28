@@ -286,6 +286,19 @@ export const en = {
   "marker.stopped": "stopped",
   "marker.offline": "no signal",
   "marker.arrived": "arrived",
+
+  // --- checkpoints e pausa de localizacao ---
+  "ghost.title": "Pause location",
+  "ghost.copy": "Stop sharing where you are, without leaving the trip.",
+  "ghost.forMinutes": "For {minutes} minutes",
+  "ghost.pausedFor": "Paused · {minutes} min left",
+  "ghost.resume": "Share again",
+  "ghost.groupSees": "The group sees \"location paused\" — never an old position pretending to be current.",
+  "ghost.short": "Paused",
+  "member.paused": "Location paused",
+  "checkpoint.allHere": "all here",
+  "checkpoint.add": "Add checkpoint",
+  "checkpoint.reached": "{name} reached {place}",
 } as const;
 
 export type TranslationKey = keyof typeof en;

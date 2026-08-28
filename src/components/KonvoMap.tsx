@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import maplibregl, { type Map as MLMap, type Marker } from "maplibre-gl";
 
+import { participantColor } from "./ParticipantAvatar";
 import {
   buildVehicleMarker,
   updateVehicleMarker,
@@ -8,7 +9,7 @@ import {
 } from "./vehicleMarker";
 import { useTheme } from "@/theme";
 import type { LatLng, Vehicle } from "@/lib/konvo/types";
-import { bearingAt, type Route } from "@/lib/konvo/route";
+import { bearingAt, sliceRoute, type Route } from "@/lib/konvo/route";
 
 /**
  * O mapa do Live Konvo.
@@ -35,6 +36,44 @@ const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
  * app de navegacao: e a visao util em movimento, porque o que vem pela frente
  * fica em cima da tela.
  */
+/**
+ * Executa `fn` assim que o estilo estiver pronto — agora, se ja estiver.
+ *
+ * `isStyleLoaded()` volta false enquanto os tiles carregam, e nesse caso
+ * esperar apenas por `style.load` nao adianta: esse evento ja disparou e nao
+ * dispara de novo. `idle` cobre o intervalo, e o `style.load` continua
+ * ouvindo para o caso de o tema mudar depois.
+ */
+function whenStyleReady(m: MLMap, fn: () => void): () => void {
+  if (m.isStyleLoaded()) {
+    fn();
+  } else {
+    m.once("idle", fn);
+  }
+  m.on("style.load", fn);
+  return () => {
+    m.off("style.load", fn);
+    m.off("idle", fn);
+  };
+}
+
+/**
+ * Resolve `var(--x)` para a cor real.
+ *
+ * O MapLibre desenha em WebGL e nao tem acesso ao CSS: passar uma variavel
+ * custom faz ele descartar o valor silenciosamente e manter o anterior. Os
+ * marcadores nao sofrem disso porque sao HTML — o que torna o problema
+ * especialmente traicoeiro, ja que metade da tela fica com a cor certa.
+ */
+function cssColor(value: string): string {
+  const name = value.match(/^var\((--[^),]+)\)$/)?.[1];
+  if (!name) return value;
+  const resolved = getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
+  return resolved || value;
+}
+
 export type CameraMode = "overview" | "follow";
 
 interface Props {
@@ -44,7 +83,7 @@ interface Props {
   camera?: CameraMode;
   /** textos das pilulas de estado; vem traduzidos de fora */
   labels: MarkerLabels;
-  /** participante em foco: marcador maior e camera segue ele */
+  /** participante em foco: marcador maior, camera segue e rota dele acende */
   selectedId?: string | null;
   onSelect?: (vehicleId: string) => void;
   /** veiculo que a camera segue no modo `follow` */
@@ -168,14 +207,80 @@ export function KonvoMap({
       }
     };
 
-    if (m.isStyleLoaded()) draw();
     // `style.load` dispara tambem depois de cada setStyle, que zera fontes e
     // camadas. Sem reagir a ele, a rota some ao trocar claro/escuro.
-    m.on("style.load", draw);
-    return () => {
-      m.off("style.load", draw);
-    };
+    return whenStyleReady(m, draw);
   }, [routeGeoJSON, resolved]);
+
+  // --- rota de quem esta em foco --------------------------------------------
+
+  /**
+   * A camada nasce UMA vez (e renasce quando o tema troca o estilo); o dado e
+   * atualizado a parte, num efeito que roda a cada posicao nova.
+   *
+   * Estavam juntos antes, e isso escondia uma corrida: o efeito re-executa a
+   * cada segundo, e a limpeza removia o listener de `idle` antes de ele
+   * disparar. Resultado — a camada existia, mas nunca recebia dado nem cor.
+   */
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+
+    const create = () => {
+      if (m.getSource("selected-route")) return;
+      m.addSource("selected-route", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      m.addLayer({
+        id: "selected-route-line",
+        type: "line",
+        source: "selected-route",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "#000", "line-width": 7, "line-opacity": 0.95 },
+      });
+    };
+
+    return whenStyleReady(m, create);
+  }, [resolved]);
+
+  /**
+   * O trecho que a pessoa selecionada ja percorreu, aceso na cor dela.
+   *
+   * A rota compartilhada mostra por onde o grupo vai; esta mostra ate onde
+   * ESTA pessoa chegou. E o que responde "quanto ele ja andou?" de relance,
+   * sem ler numero nenhum.
+   */
+  useEffect(() => {
+    const m = map.current;
+    const source = m?.getSource("selected-route") as maplibregl.GeoJSONSource | undefined;
+    if (!m || !source) return;
+
+    const target = vehicles.find((v) => v.id === selectedId);
+    const upto = target?.distanceAlongM ?? null;
+
+    if (route && target && upto !== null && target.roadBound) {
+      source.setData({
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: sliceRoute(route, 0, upto).map((p) => [p.lng, p.lat]),
+        },
+      });
+      if (m.getLayer("selected-route-line")) {
+        m.setPaintProperty(
+          "selected-route-line",
+          "line-color",
+          cssColor(participantColor(target.driver.colorIndex)),
+        );
+      }
+    } else {
+      // Sem selecao a camada continua existindo, so vazia — remover e recriar
+      // a cada toque faria o mapa piscar.
+      source.setData({ type: "FeatureCollection", features: [] });
+    }
+  }, [selectedId, vehicles, route]);
 
   // --- destino -------------------------------------------------------------
 
