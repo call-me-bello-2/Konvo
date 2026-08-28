@@ -275,6 +275,17 @@ export const en = {
   "live.goToMeeting": "Go to meeting point",
   "live.goToDestination": "Go to destination",
   "live.meetingPhase": "Meeting first at {place}",
+
+  // --- HUD do mapa ---
+  "live.overview": "See everyone",
+  "live.followMe": "Back to me",
+  "live.navigateTo": "Navigate to {name}",
+  "live.goTo": "Go to",
+  "marker.together": "together",
+  "marker.behind": "+{time}",
+  "marker.stopped": "stopped",
+  "marker.offline": "no signal",
+  "marker.arrived": "arrived",
 } as const;
 
 export type TranslationKey = keyof typeof en;

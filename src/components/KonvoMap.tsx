@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef } from "react";
 import maplibregl, { type Map as MLMap, type Marker } from "maplibre-gl";
 
-import { buildVehicleMarker, updateVehicleMarker } from "./vehicleMarker";
+import {
+  buildVehicleMarker,
+  updateVehicleMarker,
+  type MarkerLabels,
+} from "./vehicleMarker";
 import { useTheme } from "@/theme";
 import type { LatLng, Vehicle } from "@/lib/konvo/types";
 import { bearingAt, type Route } from "@/lib/konvo/route";
@@ -38,6 +42,11 @@ interface Props {
   vehicles: Vehicle[];
   destination: LatLng & { name: string };
   camera?: CameraMode;
+  /** textos das pilulas de estado; vem traduzidos de fora */
+  labels: MarkerLabels;
+  /** participante em foco: marcador maior e camera segue ele */
+  selectedId?: string | null;
+  onSelect?: (vehicleId: string) => void;
   /** veiculo que a camera segue no modo `follow` */
   followId?: string | null;
   /** desenha um anel a mais no proprio veiculo */
@@ -50,6 +59,9 @@ export function KonvoMap({
   vehicles,
   destination,
   camera = "overview",
+  labels,
+  selectedId,
+  onSelect,
   followId,
   meId,
   className,
@@ -199,15 +211,26 @@ export function KonvoMap({
 
       let marker = markers.current.get(v.id);
       if (!marker) {
-        marker = new maplibregl.Marker({ element: buildVehicleMarker(v) }).setLngLat([
-          pos.lng,
-          pos.lat,
-        ]);
+        const el = buildVehicleMarker(v, labels, {
+          isMe: v.id === meId,
+          selected: v.id === selectedId,
+        });
+        // Tocar num marcador seleciona a pessoa — o mesmo efeito de tocar no
+        // avatar da lateral. Dois caminhos para a mesma acao, porque as vezes o
+        // dedo ja esta no mapa.
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          onSelect?.(v.id);
+        });
+        marker = new maplibregl.Marker({ element: el }).setLngLat([pos.lng, pos.lat]);
         marker.addTo(m);
         markers.current.set(v.id, marker);
       } else {
         marker.setLngLat([pos.lng, pos.lat]);
-        updateVehicleMarker(marker.getElement(), v, v.id === meId);
+        updateVehicleMarker(marker.getElement(), v, labels, {
+          isMe: v.id === meId,
+          selected: v.id === selectedId,
+        });
       }
     }
 
@@ -218,7 +241,7 @@ export function KonvoMap({
         markers.current.delete(id);
       }
     }
-  }, [vehicles, meId]);
+  }, [vehicles, meId, labels, selectedId, onSelect]);
 
   // --- enquadrar todo mundo na primeira carga ------------------------------
 
@@ -254,7 +277,8 @@ export function KonvoMap({
       return;
     }
 
-    const target = vehicles.find((v) => v.id === (followId ?? meId)) ?? vehicles[0];
+    const target =
+      vehicles.find((v) => v.id === (selectedId ?? followId ?? meId)) ?? vehicles[0];
     const pos = target?.source?.fix;
     if (!pos) return;
 
@@ -279,7 +303,7 @@ export function KonvoMap({
       bearing,
       duration: first ? 600 : 0,
     });
-  }, [camera, followId, meId, vehicles, route]);
+  }, [camera, followId, meId, selectedId, vehicles, route]);
 
   // Posicionamento inline, e nao por classe: o CSS do MapLibre define
   // `.maplibregl-map { position: relative }` FORA de qualquer layer, e no

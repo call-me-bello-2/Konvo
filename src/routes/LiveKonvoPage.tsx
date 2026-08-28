@@ -20,6 +20,8 @@ import { BottomSheet } from "@/components/BottomSheet";
 import { CallSheet } from "@/components/CallSheet";
 import { InviteSheet } from "@/components/InviteSheet";
 import { KonvoMap, type CameraMode } from "@/components/KonvoMap";
+import { ParticipantRail } from "@/components/ParticipantRail";
+import { SelectedParticipant } from "@/components/SelectedParticipant";
 import { ParticipantAvatar } from "@/components/ParticipantAvatar";
 import { StatusPill } from "@/components/StatusPill";
 import { useLiveTrip } from "@/hooks/useLiveTrip";
@@ -30,6 +32,7 @@ import { logEvent, sendQuickAction } from "@/lib/db/live";
 import { navigationUrl } from "@/lib/services/routing";
 import { SCENARIOS, SCENARIO_ORDER, type ScenarioId } from "@/lib/konvo/simulator";
 import { formatAgo, formatDistance, formatDuration, formatDurationShort } from "@/lib/konvo/format";
+import type { MarkerLabels } from "@/components/vehicleMarker";
 import { cn } from "@/lib/utils";
 import type { QuickActionKind, Vehicle } from "@/lib/konvo/types";
 import type { TranslationKey } from "@/i18n/en";
@@ -64,6 +67,8 @@ export function LiveKonvoPage({ demo = false }: Props) {
   const [scenario, setScenario] = useState<ScenarioId>("together");
   const [playing, setPlaying] = useState(true);
   const [camera, setCamera] = useState<CameraMode>("overview");
+  /** participante em foco: camera vai ate ele e a lista vira o cartao dele */
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Os dois hooks sao sempre chamados (regra dos hooks); o desativado nao faz
   // trabalho nenhum.
@@ -119,6 +124,18 @@ export function LiveKonvoPage({ demo = false }: Props) {
     trip.status === "upcoming" && trip.meeting
       ? { point: trip.meeting, isMeeting: true }
       : { point: trip.destination, isMeeting: false };
+
+  // Os textos das pilulas vem daqui ja traduzidos — o marcador e DOM puro e
+  // nao tem acesso ao i18n.
+  const markerLabels: MarkerLabels = {
+    together: t("marker.together"),
+    stopped: t("marker.stopped"),
+    offline: t("marker.offline"),
+    arrived: t("marker.arrived"),
+    behind: (seconds) => t("marker.behind", { time: formatDurationShort(seconds) }),
+  };
+
+  const selected = vehicles.find((v) => v.id === selectedId) ?? null;
 
   const lead = vehicles.reduce<Vehicle | null>(
     (a, b) => (a === null || b.behindByM < a.behindByM ? b : a),
@@ -223,8 +240,34 @@ export function LiveKonvoPage({ demo = false }: Props) {
           vehicles={vehicles}
           destination={trip.destination}
           camera={camera}
+          labels={markerLabels}
+          selectedId={selectedId}
+          onSelect={(id) => {
+            setSelectedId(id);
+            setCamera("follow");
+          }}
           meId={me?.id ?? null}
           className=""
+        />
+
+        {/* Os participantes na borda: um toque leva a camera ate a pessoa, sem
+            precisar cacar o pino no mapa. */}
+        <ParticipantRail
+          vehicles={vehicles}
+          selectedId={selectedId}
+          meId={me?.id ?? null}
+          onSelect={(id) => {
+            setSelectedId(id);
+            setCamera(id ? "follow" : "overview");
+          }}
+          onOverview={() => {
+            setSelectedId(null);
+            setCamera("overview");
+          }}
+          onFollowMe={() => {
+            setSelectedId(me?.id ?? null);
+            setCamera("follow");
+          }}
         />
 
         {/* Alternar visao, como num app de navegacao: de cima para entender o
@@ -233,7 +276,7 @@ export function LiveKonvoPage({ demo = false }: Props) {
           type="button"
           onClick={() => setCamera((c) => (c === "overview" ? "follow" : "overview"))}
           aria-label={t("live.camera")}
-          className="absolute right-3 top-3 flex h-11 items-center gap-2 rounded-pill bg-surface/95 px-3.5 font-bold shadow-card backdrop-blur active:bg-surface-2"
+          className="absolute left-3 top-3 flex h-11 items-center gap-2 rounded-pill bg-surface/95 px-3.5 font-bold shadow-card backdrop-blur active:bg-surface-2"
         >
           {camera === "overview" ? (
             <Layers3 className="size-[18px] text-konvo-500" strokeWidth={2.4} />
@@ -281,7 +324,27 @@ export function LiveKonvoPage({ demo = false }: Props) {
         />
 
         <div className="mt-3 border-t border-hairline pt-2">
-          <GroupList vehicles={vehicles} t={t} locale={locale} />
+          {selected ? (
+            <SelectedParticipant
+              vehicle={selected}
+              isMe={selected.id === me?.id}
+              onClose={() => {
+                setSelectedId(null);
+                setCamera("overview");
+              }}
+              onTalk={() => navigate("/activity")}
+            />
+          ) : (
+            <GroupList
+              vehicles={vehicles}
+              t={t}
+              locale={locale}
+              onSelect={(id) => {
+                setSelectedId(id);
+                setCamera("follow");
+              }}
+            />
+          )}
         </div>
       </div>
 
@@ -491,17 +554,24 @@ function GroupList({
   vehicles,
   t,
   locale,
+  onSelect,
 }: {
   vehicles: Vehicle[];
   t: (k: TranslationKey, v?: Record<string, string | number>) => string;
   locale: string;
+  onSelect: (id: string) => void;
 }) {
   const sorted = [...vehicles].sort((a, b) => a.behindByM - b.behindByM);
 
   return (
     <div className="max-h-[22dvh] overflow-y-auto overscroll-contain">
       {sorted.map((v) => (
-        <div key={v.id} className="flex items-center gap-3 py-2">
+        <button
+          key={v.id}
+          type="button"
+          onClick={() => onSelect(v.id)}
+          className="flex w-full items-center gap-3 py-2 text-left active:opacity-70"
+        >
           <ParticipantAvatar
             name={v.driver.displayName}
             colorIndex={v.driver.colorIndex}
@@ -523,7 +593,7 @@ function GroupList({
               {describe(v, t, locale)}
             </div>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );

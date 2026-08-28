@@ -276,4 +276,15 @@ export const ptBR: Record<TranslationKey, string> = {
   "live.goToMeeting": "Ir ao ponto de encontro",
   "live.goToDestination": "Ir ao destino",
   "live.meetingPhase": "Encontro primeiro em {place}",
+
+  // --- HUD do mapa ---
+  "live.overview": "Ver todos",
+  "live.followMe": "Voltar pra mim",
+  "live.navigateTo": "Ir até {name}",
+  "live.goTo": "Ir até",
+  "marker.together": "junto",
+  "marker.behind": "+{time}",
+  "marker.stopped": "parou",
+  "marker.offline": "sem sinal",
+  "marker.arrived": "chegou",
 };
