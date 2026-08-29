@@ -14,6 +14,7 @@ import { ProfilePage } from "./routes/ProfilePage";
 import { NewKonvoPage } from "./routes/NewKonvoPage";
 import { JoinKonvoPage } from "./routes/JoinKonvoPage";
 import { JoinByCodePage } from "./routes/JoinByCodePage";
+import { TripDetailPage } from "./routes/TripDetailPage";
 import { LiveKonvoPage } from "./routes/LiveKonvoPage";
 
 /**
@@ -24,7 +25,7 @@ import { LiveKonvoPage } from "./routes/LiveKonvoPage";
  * e uma barra de abas ali so tiraria espaco do que importa.
  */
 
-const FULLSCREEN = ["/konvo/", "/meet/", "/join", "/new", "/demo"];
+const FULLSCREEN = ["/konvo/", "/meet/", "/join", "/new", "/demo", "/trips/"];
 
 export function App() {
   const { pathname } = useLocation();
@@ -63,6 +64,7 @@ export function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/trips" element={<TripsPage />} />
+          <Route path="/trips/:tripId" element={<TripDetailPage />} />
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/you" element={<ProfilePage />} />
           <Route path="/new" element={<NewKonvoPage />} />

@@ -300,4 +300,13 @@ export const ptBR: Record<TranslationKey, string> = {
   "checkpoint.allHere": "todos",
   "checkpoint.add": "Adicionar parada",
   "checkpoint.reached": "{name} chegou em {place}",
+
+  // --- detalhe da viagem ---
+  "detail.cars": "Carros",
+  "detail.stops": "Paradas no caminho",
+  "detail.searchStop": "Onde vocês param?",
+  "detail.stopsCopy": "Quando alguém chega numa parada, o grupo vê — ninguém precisa mandar mensagem.",
+  "detail.start": "Começar Konvo",
+  "event.checkpointReached": "{name} chegou em {place}",
+  "detail.notFound": "Viagem não encontrada",
 };

@@ -299,6 +299,15 @@ export const en = {
   "checkpoint.allHere": "all here",
   "checkpoint.add": "Add checkpoint",
   "checkpoint.reached": "{name} reached {place}",
+
+  // --- detalhe da viagem ---
+  "detail.cars": "Cars",
+  "detail.stops": "Stops along the way",
+  "detail.searchStop": "Where do you stop?",
+  "detail.stopsCopy": "When someone reaches a stop, the group sees it — no one has to message.",
+  "detail.start": "Start Konvo",
+  "event.checkpointReached": "{name} reached {place}",
+  "detail.notFound": "Trip not found",
 } as const;
 
 export type TranslationKey = keyof typeof en;

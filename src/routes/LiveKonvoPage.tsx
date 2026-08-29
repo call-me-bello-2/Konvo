@@ -36,7 +36,7 @@ import { navigationUrl } from "@/lib/services/routing";
 import { SCENARIOS, SCENARIO_ORDER, type ScenarioId } from "@/lib/konvo/simulator";
 import { formatAgo, formatDistance, formatDuration, formatDurationShort } from "@/lib/konvo/format";
 import type { MarkerLabels } from "@/components/vehicleMarker";
-import { deriveCheckpoints } from "@/lib/konvo/checkpoints";
+import { useCheckpoints } from "@/hooks/useCheckpoints";
 import { cn } from "@/lib/utils";
 import type { QuickActionKind, Vehicle } from "@/lib/konvo/types";
 import type { TranslationKey } from "@/i18n/en";
@@ -99,6 +99,17 @@ export function LiveKonvoPage({ demo = false }: Props) {
   );
   const { speaking } = useVoiceNotes(demo ? undefined : tripId, me?.id ?? null, nameOf);
 
+  // Estes precisam ficar ACIMA dos retornos antecipados: hook nao pode ser
+  // chamado condicionalmente, e abaixo do `if (live.loading) return` ele
+  // deixaria de rodar em alguns renders.
+  const myDerived = live.members.find((m) => m.id === me?.id);
+  const { progress: checkpoints } = useCheckpoints(
+    demo ? undefined : tripId,
+    live.route,
+    myDerived ?? null,
+    live.members,
+  );
+
   if (live.loading) return <FullMessage>…</FullMessage>;
   if (live.error || !trip) return <FullMessage>{live.error ?? t("join.notFound")}</FullMessage>;
 
@@ -117,7 +128,6 @@ export function LiveKonvoPage({ demo = false }: Props) {
 
   // A comemoracao dispara UMA vez, quando a propria pessoa chega. Repetir a
   // cada atualizacao de posicao transformaria o momento em incomodo.
-  const myDerived = live.members.find((m) => m.id === me?.id);
   if (!demo && !celebrated && myDerived?.state === "arrived") {
     setCelebrated(true);
     setCelebrating(true);
@@ -141,10 +151,6 @@ export function LiveKonvoPage({ demo = false }: Props) {
   };
 
   const selected = vehicles.find((v) => v.id === selectedId) ?? null;
-
-  // Ainda sem checkpoints vindos do banco — a faixa some sozinha quando a
-  // lista esta vazia, entao ligar a fonte depois nao mexe no layout.
-  const checkpoints = deriveCheckpoints([], live.members, new Map());
 
   const lead = vehicles.reduce<Vehicle | null>(
     (a, b) => (a === null || b.behindByM < a.behindByM ? b : a),
